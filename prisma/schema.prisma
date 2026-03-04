@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Manajemen Sumber Pemasukan
+model IncomeSource {
+  id              String   @id @default(cuid())
+  name            String   // cth: "Booth 01 - 50", "Gaji IT", "SaaS POS Langganan"
+  category        CategoryType // BOOTH, SAAS, SALARY, PROJECT, COMMISSION
+  amount          Float
+  isRecurring     Boolean  @default(true)
+  payoutDate      Int?     // Tanggal cair (1-31) untuk recurring
+  expectedDate    DateTime? // Tanggal cair spesifik untuk one-time project
+  isActive        Boolean  @default(true)
+  transactions    Transaction[]
+}
+
+// Pencatatan Transaksi Real-time
+model Transaction {
+  id              String   @id @default(cuid())
+  type            TxType   // INCOME, EXPENSE
+  amount          Float
+  date            DateTime @default(now())
+  description     String
+  sourceId        String?
+  source          IncomeSource? @relation(fields: [sourceId], references: [id])
+  expenseCategory String?  // LIFESTYLE, SKINCARE, EDUCATION, ASSET
+}
+
+// Sistem Peringatan & Batas Pengeluaran
+model BudgetLimit {
+  id              String   @id @default(cuid())
+  category        String   @unique // LIFESTYLE, FOOD, SKINCARE
+  maxLimit        Float
+  warningThreshold Float   // cth: 80% dari maxLimit
+}
+
+// Alokasi Target & Tabungan
+model SavingGoal {
+  id              String   @id @default(cuid())
+  name            String   // cth: "DP Rumah Valerian", "S2 Korea", "Beli Kendaraan"
+  targetAmount    Float
+  currentAmount   Float    @default(0)
+  deadline        DateTime
+  priority        Int      // 1 (Highest) to 5 (Lowest)
+}
+
+enum CategoryType {
+  BOOTH
+  SAAS
+  SALARY
+  PROJECT
+  COMMISSION
+}
+
+enum TxType {
+  INCOME
+  EXPENSE
+}
