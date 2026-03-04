@@ -1,5 +1,5 @@
 import { getSavingGoals } from "@/actions/saving";
-import { PlusCircle, Target, TrendingUp } from "lucide-react";
+import { PlusCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function TargetsPage() {
@@ -59,7 +59,7 @@ export default async function TargetsPage() {
                 })}
                 {goals.length === 0 && (
                     <div className="col-span-1 md:col-span-2 lg:col-span-3 h-40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center text-slate-500">
-                        No saving goals right now. Let's create one!
+                        No saving goals right now. Let&apos;s create one!
                     </div>
                 )}
             </div>

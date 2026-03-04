@@ -44,7 +44,8 @@ export async function GET(request: Request) {
       success: true,
       message: `Processed ${insertedCount} recurring incomes for date ${todayDate}.`,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { getCategoryExpenseWarning } from "@/actions/budget";
-import { AlertTriangle, TrendingDown } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
