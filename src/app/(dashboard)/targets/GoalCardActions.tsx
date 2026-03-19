@@ -135,7 +135,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-120">
           <DialogHeader>
             <DialogTitle>Edit Saving Goal</DialogTitle>
           </DialogHeader>
@@ -143,6 +143,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Target</label>
               <input
+                title="Nama target"
                 name="name"
                 required
                 defaultValue={goal.name}
@@ -153,6 +154,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Target Dana (Rp)</label>
                     <input
+                      title="Target dana"
                         name="targetAmount"
                         type="number"
                         required
@@ -163,6 +165,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Sudah Terkumpul (Rp)</label>
                     <input
+                      title="Dana terkumpul"
                         name="currentAmount"
                         type="number"
                         required
@@ -175,6 +178,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Deadline</label>
                     <input
+                      title="Deadline target"
                         name="deadline"
                         type="date"
                         required
@@ -185,6 +189,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Prioritas (1-5)</label>
                     <input
+                      title="Prioritas target"
                         name="priority"
                         type="number"
                         min={1}
@@ -209,7 +214,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
 
       {/* Add Fund Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-100">
           <DialogHeader>
             <DialogTitle>Add Fund to {goal.name}</DialogTitle>
           </DialogHeader>
@@ -217,6 +222,7 @@ export function GoalCardActions({ goal }: { goal: SavingGoal }) {
             <div className="space-y-2">
               <label className="text-sm font-medium">Jumlah Nabung (Rp)</label>
               <input
+                title="Nominal tabungan"
                 name="amount"
                 type="number"
                 required

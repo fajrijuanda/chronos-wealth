@@ -73,7 +73,7 @@ export function EditExpenseDialog({ expense, categories }: { expense: Expense, c
             <Edit2 className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Edit Pengeluaran</DialogTitle>
         </DialogHeader>
@@ -91,6 +91,7 @@ export function EditExpenseDialog({ expense, categories }: { expense: Expense, c
           <div className="space-y-2">
             <label className="text-sm font-medium">Jumlah (Rp)</label>
             <input
+              title="Jumlah pengeluaran"
               name="amount"
               type="number"
               required
@@ -101,6 +102,7 @@ export function EditExpenseDialog({ expense, categories }: { expense: Expense, c
           <div className="space-y-2">
             <label className="text-sm font-medium">Tanggal</label>
             <input
+              title="Tanggal pengeluaran"
               name="date"
               type="date"
               required

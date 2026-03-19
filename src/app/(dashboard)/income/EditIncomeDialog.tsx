@@ -77,7 +77,7 @@ export function EditIncomeDialog({ income }: { income: IncomeData }) {
           <Edit2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-120">
         <DialogHeader>
           <DialogTitle>Edit Income Source</DialogTitle>
           <DialogDescription>
@@ -88,6 +88,7 @@ export function EditIncomeDialog({ income }: { income: IncomeData }) {
           <div className="space-y-2">
             <label className="text-sm font-medium">Nama Pendapatan</label>
             <input
+              title="Nama pendapatan"
               name="name"
               required
               defaultValue={income.name}
@@ -98,6 +99,7 @@ export function EditIncomeDialog({ income }: { income: IncomeData }) {
             <div className="space-y-2">
               <label className="text-sm font-medium">Jumlah (Rp)</label>
               <input
+                title="Jumlah pendapatan"
                 name="amount"
                 type="number"
                 required
@@ -141,6 +143,7 @@ export function EditIncomeDialog({ income }: { income: IncomeData }) {
                 <div className="flex items-center gap-2">
                     <span className="text-sm">Dibayar setiap tanggal</span>
                     <input
+                      title="Tanggal payout recurring"
                         name="payoutDate"
                         type="number"
                         min={1}
@@ -153,6 +156,7 @@ export function EditIncomeDialog({ income }: { income: IncomeData }) {
             <div className="space-y-2">
                 <label className="text-sm font-medium italic text-slate-500">Jika Sekali Jalan:</label>
                 <input
+                  title="Tanggal pendapatan one-time"
                     name="expectedDate"
                     type="date"
                     defaultValue={income.expectedDate ? new Date(income.expectedDate).toISOString().slice(0,10) : ""}

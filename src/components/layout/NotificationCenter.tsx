@@ -242,7 +242,7 @@ export function NotificationCenter({
             ) : null}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[360px] rounded-2xl p-0">
+        <DropdownMenuContent align="end" className="w-90 rounded-2xl p-0">
           <div className="border-b border-border/75 px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <div>

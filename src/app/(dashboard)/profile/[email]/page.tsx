@@ -121,9 +121,11 @@ export default async function PublicProfilePage({
                       <p className="text-sm font-semibold">{item.title}</p>
                       <p className="text-xs font-bold text-muted-foreground">{pct.toFixed(0)}%</p>
                     </div>
-                    <div className="mb-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                      <div className="h-full rounded-full bg-linear-to-r from-indigo-500 to-sky-500" style={{ width: `${pct}%` }} />
-                    </div>
+                    <progress
+                      value={pct}
+                      max={100}
+                      className="mb-2 h-2 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-slate-200 dark:[&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-linear-to-r [&::-webkit-progress-value]:from-indigo-500 [&::-webkit-progress-value]:to-sky-500 [&::-moz-progress-bar]:bg-linear-to-r [&::-moz-progress-bar]:from-indigo-500 [&::-moz-progress-bar]:to-sky-500"
+                    />
                     <p className="text-xs text-muted-foreground">
                       {formatGroupedNumber(item.currentValue)} / {formatGroupedNumber(item.targetValue)} {item.unit}
                     </p>

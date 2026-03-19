@@ -149,29 +149,29 @@ export function GrowthTargetCardActions({
           <form action={onUpdate} className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Judul</label>
-              <input name="title" defaultValue={target.title} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Judul target" name="title" defaultValue={target.title} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Target Value</label>
-                <input name="targetValue" type="number" min={1} required defaultValue={target.targetValue} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+                <input title="Nilai target" name="targetValue" type="number" min={1} required defaultValue={target.targetValue} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Current Value</label>
-                <input name="currentValue" type="number" min={0} required defaultValue={target.currentValue} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+                <input title="Nilai saat ini" name="currentValue" type="number" min={0} required defaultValue={target.currentValue} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Unit</label>
-              <input name="unit" required defaultValue={target.unit} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Satuan target" name="unit" required defaultValue={target.unit} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Deadline</label>
-              <input name="deadline" type="date" defaultValue={target.deadline ? new Date(target.deadline).toISOString().slice(0, 10) : ""} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Deadline target" name="deadline" type="date" defaultValue={target.deadline ? new Date(target.deadline).toISOString().slice(0, 10) : ""} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Catatan</label>
-              <textarea name="note" rows={3} defaultValue={target.note ?? ""} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <textarea title="Catatan target" name="note" rows={3} defaultValue={target.note ?? ""} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
@@ -189,7 +189,7 @@ export function GrowthTargetCardActions({
           <form action={onAddProgress} className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nilai Tambahan ({target.unit})</label>
-              <input name="amount" type="number" min={1} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Nominal progress" name="amount" type="number" min={1} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>

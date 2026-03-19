@@ -62,7 +62,7 @@ export function EditBoothTargetDialog({
             Edit Target
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-105">
         <DialogHeader>
           <DialogTitle>Update Booth Target</DialogTitle>
           <DialogDescription>
@@ -73,6 +73,7 @@ export function EditBoothTargetDialog({
           <div className="space-y-2">
             <label className="text-sm font-medium">Berapa Target Booth Yang Ingin Dicapai?</label>
             <input
+              title="Target booth equivalent"
               name="targetBoothEquivalent"
               type="number"
               min={1}
@@ -84,6 +85,7 @@ export function EditBoothTargetDialog({
           <div className="space-y-2">
             <label className="text-sm font-medium">Asumsi Profit/Revenue Per Booth (Rp)</label>
             <input
+              title="Revenue per booth"
               name="revenuePerBooth"
               type="number"
               min={1}

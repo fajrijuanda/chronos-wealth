@@ -96,15 +96,15 @@ export function AddGrowthTargetDialog({ email }: { email: string }) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <label className="text-sm font-medium">Judul</label>
-              <input name="title" required placeholder="Contoh: Kumpulkan modal 500 juta" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Judul growth target" name="title" required placeholder="Contoh: Kumpulkan modal 500 juta" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Target Value</label>
-              <input name="targetValue" type="number" min={1} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Nilai target" name="targetValue" type="number" min={1} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Current Value</label>
-              <input name="currentValue" type="number" min={0} defaultValue={0} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Nilai saat ini" name="currentValue" type="number" min={0} defaultValue={0} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Unit</label>
@@ -112,13 +112,13 @@ export function AddGrowthTargetDialog({ email }: { email: string }) {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Deadline (Opsional)</label>
-              <input name="deadline" type="date" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+              <input title="Deadline target" name="deadline" type="date" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Catatan (Opsional)</label>
-            <textarea name="note" rows={3} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
+            <textarea title="Catatan target" name="note" rows={3} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2 dark:border-slate-800" />
           </div>
 
           <DialogFooter>

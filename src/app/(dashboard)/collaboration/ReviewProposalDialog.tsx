@@ -48,7 +48,7 @@ export function ReviewProposalDialog({ proposalId, reviewerUserId, boothName }: 
       <DialogTrigger asChild>
         <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">Review</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-105">
         <DialogHeader>
           <DialogTitle>Tinjau Proposal Booth</DialogTitle>
         </DialogHeader>
@@ -56,13 +56,14 @@ export function ReviewProposalDialog({ proposalId, reviewerUserId, boothName }: 
           <div className="space-y-2">
             <label className="text-sm font-medium">Catatan Review (Opsional)</label>
             <textarea
+              title="Catatan review"
               name="reviewerNote"
               placeholder="Tambahkan pesan untuk partner Anda..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2 min-h-[100px]"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2 min-h-25"
             />
           </div>
 
-          <DialogFooter className="pt-4 flex !justify-between">
+          <DialogFooter className="pt-4 flex justify-between!">
             <Button 
                 type="button" 
                 variant="outline" 

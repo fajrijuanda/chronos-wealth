@@ -90,7 +90,7 @@ export default async function ExpensesPage() {
                 })}
             </div>
 
-            <div className="pt-4 mt-8 pt-8 border-t border-slate-200/50 dark:border-slate-800/50">
+            <div className="mt-8 pt-8 border-t border-slate-200/50 dark:border-slate-800/50">
                 <ExpenseList 
                     expenses={expenses.map(e => ({
                         id: e.id,

@@ -7,6 +7,8 @@ import { formatGroupedNumber } from "@/lib/number-format";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { deleteTransaction } from "@/actions/transaction";
 import { useRouter } from "next/navigation";
+import { formatJakartaDate } from "@/lib/date-format";
+import { ManagementTable, type TableColumn, type TableFilter } from "@/components/ui/management-table";
 
 import { EditExpenseDialog } from "./EditExpenseDialog";
 
@@ -44,53 +46,77 @@ export function ExpenseList({ expenses, categories }: { expenses: Expense[], cat
     });
   };
 
-  if (expenses.length === 0) {
-      return (
-          <div className="text-center py-10 text-slate-500">
-              Belum ada catatan pengeluaran bulan ini.
-          </div>
-      );
-  }
+  const columns: Array<TableColumn<Expense>> = [
+    {
+      key: "description",
+      label: "Expense",
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg bg-slate-100 p-1.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <ShoppingCart className="h-3.5 w-3.5" />
+          </span>
+          <span className="font-semibold">{row.description}</span>
+        </div>
+      ),
+      exportValue: (row) => row.description,
+    },
+    {
+      key: "category",
+      label: "Category",
+      render: (row) => row.expenseCategory ?? "UNCATEGORIZED",
+      exportValue: (row) => row.expenseCategory ?? "UNCATEGORIZED",
+    },
+    {
+      key: "date",
+      label: "Date",
+      render: (row) => formatJakartaDate(row.date),
+      exportValue: (row) => formatJakartaDate(row.date),
+    },
+    {
+      key: "amount",
+      label: "Amount",
+      render: (row) => <span className="font-semibold text-rose-600 dark:text-rose-400">Rp {formatGroupedNumber(row.amount)}</span>,
+      exportValue: (row) => row.amount,
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (row) => (
+        <div className="flex items-center justify-end gap-1">
+          <EditExpenseDialog expense={row} categories={categories} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-slate-400 hover:text-rose-600"
+            onClick={() => handleDelete(row.id, row.description)}
+            disabled={isPending}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+      exportValue: () => "",
+    },
+  ];
+
+  const filters: Array<TableFilter<Expense>> = categories.map((category) => ({
+    value: category.toLowerCase(),
+    label: category,
+    predicate: (row) => (row.expenseCategory ?? "").toLowerCase() === category.toLowerCase(),
+  }));
 
   return (
-    <div className="space-y-3">
-      <h3 className="font-semibold text-lg mb-2">Recent Expenses</h3>
-      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50">
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {expenses.map((exp) => (
-            <div key={exp.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                    <ShoppingCart className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                </div>
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">{exp.description}</p>
-                  <p className="text-xs text-slate-500">
-                    {new Date(exp.date).toLocaleDateString()} • <span className="uppercase">{exp.expenseCategory}</span>
-                  </p>
-                </div>
-              </div>
-            <div className="flex items-center gap-4">
-                <p className="font-bold text-rose-600 dark:text-rose-400">
-                  Rp {formatGroupedNumber(exp.amount)}
-                </p>
-                <div className="flex items-center gap-1">
-                  <EditExpenseDialog expense={exp} categories={categories} />
-                  <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-slate-400 hover:text-rose-600 transition-colors h-8 w-8"
-                      onClick={() => handleDelete(exp.id, exp.description)}
-                      disabled={isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <ManagementTable
+      title="Expense Records"
+      subtitle="Gunakan filter kategori, pilih baris, lalu export sesuai data yang terlihat atau dipilih."
+      rows={expenses}
+      columns={columns}
+      filters={filters}
+      searchableText={(row) => `${row.description} ${row.expenseCategory ?? "uncategorized"}`}
+      emptyMessage="Belum ada catatan pengeluaran bulan ini."
+      exportFileName="expense-records"
+    />
   );
 }

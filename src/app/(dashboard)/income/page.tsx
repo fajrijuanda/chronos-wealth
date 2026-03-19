@@ -6,12 +6,10 @@ import {
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
 import { formatGroupedNumber } from "@/lib/number-format";
-import { formatJakartaDate, formatJakartaDateTime } from "@/lib/date-format";
 import { redirect } from "next/navigation";
-import { Wallet, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddIncomeDialog } from "./AddIncomeDialog";
-import { IncomeTableRowActions } from "./IncomeTableRowActions";
+import { IncomeDataTables } from "./IncomeDataTables";
 
 export const dynamic = "force-dynamic";
 
@@ -77,81 +75,28 @@ export default async function IncomePage({
                 <AddIncomeDialog email={activeEmail} />
             </div>
 
-            <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
-                            <tr>
-                                <th className="px-6 py-4 font-medium">Name</th>
-                                <th className="px-6 py-4 font-medium">Category</th>
-                                <th className="px-6 py-4 font-medium">Amount</th>
-                                <th className="px-6 py-4 font-medium">Type</th>
-                                <th className="px-6 py-4 font-medium">Payout Date</th>
-                                <th className="px-6 py-4 font-medium">Status</th>
-                                <th className="px-6 py-4 font-medium text-right pr-10">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {incomes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
-                                        No income sources found. Add one to get started.
-                                    </td>
-                                </tr>
-                            ) : (
-                                incomes.map((inc) => (
-                                    <tr key={inc.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${!inc.isActive ? 'opacity-50' : ''}`}>
-                                        <td className="px-6 py-4 font-medium flex items-center gap-3">
-                                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                                                <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                            </div>
-                                            {inc.name}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-semibold">
-                                                {inc.category}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                                            Rp {formatGroupedNumber(inc.amount)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {inc.isRecurring ? "Recurring" : "One-time"}
-                                        </td>
-                                        <td className="px-6 py-4 flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-slate-400" />
-                                            {inc.isRecurring ? `Every ${inc.payoutDate}th` : inc.expectedDate ? formatJakartaDate(inc.expectedDate) : "N/A"}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {inc.isActive ? (
-                                                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full w-fit text-xs font-medium">
-                                                    <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 dark:bg-slate-900/40 px-3 py-1 rounded-full w-fit text-xs font-medium border border-slate-200 dark:border-slate-800">
-                                                    Inactive
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right pr-8">
-                                            <IncomeTableRowActions income={{
-                                                id: inc.id,
-                                                name: inc.name,
-                                                amount: inc.amount,
-                                                category: inc.category,
-                                                isRecurring: inc.isRecurring,
-                                                payoutDate: inc.payoutDate,
-                                                expectedDate: inc.expectedDate,
-                                                isActive: inc.isActive
-                                            }} />
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <IncomeDataTables
+                incomes={incomes.map((inc) => ({
+                    id: inc.id,
+                    name: inc.name,
+                    category: inc.category,
+                    amount: inc.amount,
+                    isRecurring: inc.isRecurring,
+                    payoutDate: inc.payoutDate,
+                    expectedDate: inc.expectedDate,
+                    isActive: inc.isActive,
+                }))}
+                salesHistory={salesHistory.map((item) => ({
+                    id: item.id,
+                    month: item.month,
+                    year: item.year,
+                    boothName: item.booth.name,
+                    grossIncome: item.grossIncome,
+                    netIncome: item.netIncome ?? null,
+                    uploadedBy: item.uploadedBy.displayName,
+                    uploadedAt: item.uploadedAt,
+                }))}
+            />
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm p-6">
@@ -230,46 +175,7 @@ export default async function IncomePage({
                 </div>
             </div>
 
-            <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-200/60 dark:border-slate-800">
-                    <h2 className="text-xl font-semibold">Booth Sales History</h2>
-                    <p className="text-sm text-slate-500">Latest uploaded monthly results from your owned/shared booths.</p>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
-                            <tr>
-                                <th className="px-6 py-4 font-medium">Period</th>
-                                <th className="px-6 py-4 font-medium">Booth</th>
-                                <th className="px-6 py-4 font-medium">Gross</th>
-                                <th className="px-6 py-4 font-medium">Net</th>
-                                <th className="px-6 py-4 font-medium">Uploaded By</th>
-                                <th className="px-6 py-4 font-medium">Uploaded At</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {salesHistory.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
-                                        No sales uploads yet.
-                                    </td>
-                                </tr>
-                            ) : (
-                                salesHistory.map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <td className="px-6 py-4">{`${item.month}/${item.year}`}</td>
-                                        <td className="px-6 py-4 font-medium">{item.booth.name}</td>
-                                        <td className="px-6 py-4 text-emerald-600">Rp {formatGroupedNumber(item.grossIncome)}</td>
-                                        <td className="px-6 py-4">{item.netIncome ? `Rp ${formatGroupedNumber(item.netIncome)}` : "-"}</td>
-                                        <td className="px-6 py-4">{item.uploadedBy.displayName}</td>
-                                        <td className="px-6 py-4">{formatJakartaDateTime(item.uploadedAt)}</td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            
         </div>
     );
 }

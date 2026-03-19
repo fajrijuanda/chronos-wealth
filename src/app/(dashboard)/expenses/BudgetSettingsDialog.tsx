@@ -63,7 +63,7 @@ export function BudgetSettingsDialog({ categories }: {
           Budget Settings
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-112.5">
         <DialogHeader>
           <DialogTitle>Budget Settings</DialogTitle>
           <DialogDescription>

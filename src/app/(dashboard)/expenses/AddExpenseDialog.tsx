@@ -64,7 +64,7 @@ export function AddExpenseDialog({ categories }: { categories: string[] }) {
           Add Expense
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-112.5">
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
@@ -115,6 +115,7 @@ export function AddExpenseDialog({ categories }: { categories: string[] }) {
           <div className="space-y-2">
             <label className="text-sm font-medium">Tanggal</label>
             <input
+              title="Tanggal pengeluaran"
               name="date"
               type="date"
               defaultValue={new Date().toISOString().slice(0, 10)}

@@ -57,7 +57,7 @@ export function AddSavingGoalDialog() {
             New Goal
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-120">
         <DialogHeader>
           <DialogTitle>Add New Saving Goal</DialogTitle>
           <DialogDescription>
@@ -68,6 +68,7 @@ export function AddSavingGoalDialog() {
           <div className="space-y-2">
             <label className="text-sm font-medium">Nama Target</label>
             <input
+              title="Nama target tabungan"
               name="name"
               required
               placeholder="Contoh: Haji Orang Tua, Mobil Baru"
@@ -77,6 +78,7 @@ export function AddSavingGoalDialog() {
           <div className="space-y-2">
             <label className="text-sm font-medium">Target Dana (Rp)</label>
             <input
+              title="Target dana"
               name="targetAmount"
               type="number"
               required
@@ -88,6 +90,7 @@ export function AddSavingGoalDialog() {
             <div className="space-y-2">
                 <label className="text-sm font-medium">Deadline</label>
                 <input
+                  title="Tanggal deadline"
                     name="deadline"
                     type="date"
                     required
@@ -97,6 +100,7 @@ export function AddSavingGoalDialog() {
             <div className="space-y-2">
                 <label className="text-sm font-medium">Prioritas (1-5)</label>
                 <input
+                  title="Prioritas target"
                     name="priority"
                     type="number"
                     min={1}

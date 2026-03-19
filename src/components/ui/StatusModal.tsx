@@ -62,7 +62,7 @@ export function StatusModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && type !== "loading" && onClose()}>
-      <DialogContent showCloseButton={type !== "loading"} className="max-w-[calc(100%-2.5rem)] sm:max-w-[400px] border-none shadow-2xl overflow-hidden p-0 rounded-2xl">
+      <DialogContent showCloseButton={type !== "loading"} className="max-w-[calc(100%-2.5rem)] sm:max-w-100 border-none shadow-2xl overflow-hidden p-0 rounded-2xl">
          <div className="p-8 flex flex-col items-center text-center">
             <div className={cn("mb-6 p-4 rounded-full bg-slate-50 dark:bg-slate-900/50", type === "loading" && "animate-pulse")}>
                 {config.icon}
@@ -99,11 +99,11 @@ export function StatusModal({
                 </DialogFooter>
             )}
          </div>
-         {type === "loading" && (
-            <div className="h-1.5 w-full bg-slate-100 overflow-hidden">
-                <div className="h-full bg-blue-600 animate-progress" style={{ width: '40%' }}></div>
-            </div>
-         )}
+        {type === "loading" && (
+          <div className="h-1.5 w-full bg-slate-100 overflow-hidden">
+             <div className="h-full w-2/5 bg-blue-600 animate-progress" />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
