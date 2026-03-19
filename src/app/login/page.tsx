@@ -1,4 +1,4 @@
-import { ensureAppUserByEmail } from "@/actions/collaboration";
+import { getAppUserByEmail } from "@/actions/collaboration";
 import { getSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
 
@@ -24,7 +24,11 @@ export default async function LoginPage({
     }
 
     try {
-      await ensureAppUserByEmail({ email });
+      const existingUser = await getAppUserByEmail(email);
+      if (!existingUser) {
+        redirect("/login?error=Account%20not%20found.%20Please%20register%20first");
+      }
+
       await setSessionUserEmail(email);
       redirect("/overview");
     } catch {
@@ -66,6 +70,13 @@ export default async function LoginPage({
             Masuk
           </button>
         </form>
+
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 text-center">
+          Belum punya akun?{" "}
+          <a href="/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            Daftar di sini
+          </a>
+        </p>
       </div>
     </div>
   );
