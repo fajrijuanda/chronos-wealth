@@ -49,6 +49,15 @@ model UserFinanceProfile {
   purchaseTiming        BoothPurchaseTiming @default(START_OF_MONTH)
   purchaseDayOverride   Int?
   openingBalance        Float               @default(0)
+  idleCashTarget        Float               @default(1000000000)
+  holdingCapitalTarget  Float               @default(1500000000)
+  holdingContributionPct Float              @default(50)
+  holdingLaunchDate     DateTime            @default(dbgenerated("'2028-07-01 00:00:00'::timestamp without time zone"))
+  pt2BuildCapitalTarget Float               @default(8000000000)
+  pt2ContributionPct    Float               @default(50)
+  pt2LaunchDate         DateTime            @default(dbgenerated("'2030-01-01 00:00:00'::timestamp without time zone"))
+  renewEconomyBoothContracts Boolean        @default(true)
+  renewExclusiveBoothContracts Boolean      @default(true)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   user                  AppUser             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -75,6 +84,9 @@ model JointBoothProposal {
   requesterCapital      Float
   partnerCapital        Float
   expectedMonthlyIncome Float
+  packageType           BoothPackageType      @default(ECONOMY)
+  mouSignedAt           DateTime              @default(now())
+  referralEconomyBooths Int                   @default(0)
   status                ProposalStatus        @default(PENDING)
   selectedBoothType     BoothSelectionType
   notes                 String?
@@ -91,6 +103,17 @@ model Booth {
   id                    String            @id @default(cuid())
   name                  String
   expectedMonthlyIncome Float
+  boothUnitCount        Int               @default(1)
+  packageType           BoothPackageType  @default(ECONOMY)
+  mouSignedAt           DateTime          @default(now())
+  contractDurationMonths Int              @default(24)
+  economyProfitSharePct Float             @default(30)
+  exclusiveSharePhase1Pct Float           @default(40)
+  exclusiveSharePhase2Pct Float           @default(60)
+  exclusiveRenewalCapital Float           @default(20000000)
+  exclusivePhase2StartsAfterMonths Int    @default(96)
+  referralEconomyBooths Int               @default(0)
+  referralCommissionPerBooth Float        @default(250000)
   isShared              Boolean           @default(false)
   active                Boolean           @default(true)
   createdAt             DateTime          @default(now())
@@ -172,6 +195,7 @@ model SavingGoal {
 
 enum CategoryType {
   BOOTH
+  STOCK
   SAAS
   SALARY
   PROJECT
@@ -204,4 +228,9 @@ enum BoothSelectionType {
 enum BoothPurchaseTiming {
   START_OF_MONTH
   END_OF_MONTH
+}
+
+enum BoothPackageType {
+  EXCLUSIVE
+  ECONOMY
 }

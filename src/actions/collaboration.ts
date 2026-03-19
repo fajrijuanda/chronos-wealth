@@ -2,6 +2,7 @@
 
 import {
   AppUser,
+  BoothPackageType,
   BoothPurchaseTiming,
   BoothSelectionType,
   FriendshipStatus,
@@ -17,6 +18,9 @@ type CreateJointBoothProposalInput = {
   requesterCapital: number;
   partnerCapital: number;
   expectedMonthlyIncome: number;
+  packageType?: BoothPackageType;
+  mouSignedAt?: Date;
+  referralEconomyBooths?: number;
   selectedBoothType: BoothSelectionType;
   notes?: string;
 };
@@ -152,6 +156,9 @@ export async function createJointBoothProposal(
       requesterCapital: input.requesterCapital,
       partnerCapital: input.partnerCapital,
       expectedMonthlyIncome: input.expectedMonthlyIncome,
+      packageType: input.packageType ?? BoothPackageType.ECONOMY,
+      mouSignedAt: input.mouSignedAt ?? new Date(),
+      referralEconomyBooths: input.referralEconomyBooths ?? 0,
       selectedBoothType: input.selectedBoothType,
       notes: input.notes,
       status: ProposalStatus.PENDING,
@@ -174,6 +181,9 @@ export async function decideBoothPurchaseStrategy(input: {
   requesterAvailableBalance: number;
   partnerBoothPrice: number;
   expectedMonthlyIncome: number;
+  packageType?: BoothPackageType;
+  mouSignedAt?: Date;
+  referralEconomyBooths?: number;
   selectedBoothType: BoothSelectionType;
   notes?: string;
 }) {
@@ -182,10 +192,17 @@ export async function decideBoothPurchaseStrategy(input: {
 
   if (input.requesterAvailableBalance >= input.boothPrice) {
     const booth = await prisma.$transaction(async (tx) => {
+      const isExclusive = (input.packageType ?? BoothPackageType.ECONOMY) === BoothPackageType.EXCLUSIVE;
       const createdBooth = await tx.booth.create({
         data: {
           name: input.boothName,
           expectedMonthlyIncome: input.expectedMonthlyIncome,
+          boothUnitCount: isExclusive ? 2 : 1,
+          packageType: input.packageType ?? BoothPackageType.ECONOMY,
+          mouSignedAt: input.mouSignedAt ?? new Date(),
+          contractDurationMonths: isExclusive ? 48 : 24,
+          exclusiveRenewalCapital: isExclusive ? 20_000_000 : 20_000_000,
+          referralEconomyBooths: input.referralEconomyBooths ?? 0,
           isShared: false,
         },
       });
@@ -225,6 +242,9 @@ export async function decideBoothPurchaseStrategy(input: {
     requesterCapital,
     partnerCapital: fallbackPartnerCapital,
     expectedMonthlyIncome: input.expectedMonthlyIncome,
+    packageType: input.packageType,
+    mouSignedAt: input.mouSignedAt,
+    referralEconomyBooths: input.referralEconomyBooths,
     selectedBoothType: input.selectedBoothType,
     notes: input.notes,
   });
@@ -276,10 +296,17 @@ export async function reviewJointBoothProposal(input: {
   const partnerSharePct = (proposal.partnerCapital / totalCapital) * 100;
 
   const approvedProposal = await prisma.$transaction(async (tx) => {
+    const isExclusive = proposal.packageType === BoothPackageType.EXCLUSIVE;
     const booth = await tx.booth.create({
       data: {
         name: proposal.boothName,
         expectedMonthlyIncome: proposal.expectedMonthlyIncome,
+        boothUnitCount: isExclusive ? 2 : 1,
+        packageType: proposal.packageType,
+        mouSignedAt: proposal.mouSignedAt,
+        contractDurationMonths: isExclusive ? 48 : 24,
+        exclusiveRenewalCapital: isExclusive ? 20_000_000 : 20_000_000,
+        referralEconomyBooths: proposal.referralEconomyBooths,
         isShared: true,
       },
     });
@@ -435,6 +462,15 @@ export async function upsertUserFinanceProfile(data: {
   purchaseTiming: BoothPurchaseTiming;
   purchaseDayOverride?: number | null;
   openingBalance?: number;
+  idleCashTarget?: number;
+  holdingCapitalTarget?: number;
+  holdingContributionPct?: number;
+  holdingLaunchDate?: Date;
+  pt2BuildCapitalTarget?: number;
+  pt2ContributionPct?: number;
+  pt2LaunchDate?: Date;
+  renewEconomyBoothContracts?: boolean;
+  renewExclusiveBoothContracts?: boolean;
 }) {
   if (data.monthlyExpenseMin < 0 || data.monthlyExpenseMax < 0) {
     throw new Error("Monthly expense values must be zero or positive");
@@ -452,6 +488,26 @@ export async function upsertUserFinanceProfile(data: {
     throw new Error("purchaseDayOverride must be between 1 and 31");
   }
 
+  const idleCashTarget = data.idleCashTarget ?? 1_000_000_000;
+  const holdingCapitalTarget = data.holdingCapitalTarget ?? 1_500_000_000;
+  const holdingContributionPct = data.holdingContributionPct ?? 50;
+  const holdingLaunchDate = data.holdingLaunchDate ?? new Date("2028-07-01");
+  const pt2BuildCapitalTarget = data.pt2BuildCapitalTarget ?? 8_000_000_000;
+  const pt2ContributionPct = data.pt2ContributionPct ?? 50;
+  const pt2LaunchDate = data.pt2LaunchDate ?? new Date("2030-01-01");
+
+  if (idleCashTarget < 0 || holdingCapitalTarget < 0 || pt2BuildCapitalTarget < 0) {
+    throw new Error("Strategic target values must be zero or positive");
+  }
+
+  if (holdingContributionPct < 0 || holdingContributionPct > 100) {
+    throw new Error("holdingContributionPct must be between 0 and 100");
+  }
+
+  if (pt2ContributionPct < 0 || pt2ContributionPct > 100) {
+    throw new Error("pt2ContributionPct must be between 0 and 100");
+  }
+
   const result = await prisma.userFinanceProfile.upsert({
     where: { userId: data.userId },
     update: {
@@ -460,6 +516,15 @@ export async function upsertUserFinanceProfile(data: {
       purchaseTiming: data.purchaseTiming,
       purchaseDayOverride: data.purchaseDayOverride ?? null,
       openingBalance: data.openingBalance ?? 0,
+      idleCashTarget,
+      holdingCapitalTarget,
+      holdingContributionPct,
+      holdingLaunchDate,
+      pt2BuildCapitalTarget,
+      pt2ContributionPct,
+      pt2LaunchDate,
+      renewEconomyBoothContracts: data.renewEconomyBoothContracts ?? true,
+      renewExclusiveBoothContracts: data.renewExclusiveBoothContracts ?? true,
     },
     create: {
       userId: data.userId,
@@ -468,6 +533,15 @@ export async function upsertUserFinanceProfile(data: {
       purchaseTiming: data.purchaseTiming,
       purchaseDayOverride: data.purchaseDayOverride ?? null,
       openingBalance: data.openingBalance ?? 0,
+      idleCashTarget,
+      holdingCapitalTarget,
+      holdingContributionPct,
+      holdingLaunchDate,
+      pt2BuildCapitalTarget,
+      pt2ContributionPct,
+      pt2LaunchDate,
+      renewEconomyBoothContracts: data.renewEconomyBoothContracts ?? true,
+      renewExclusiveBoothContracts: data.renewExclusiveBoothContracts ?? true,
     },
   });
 
@@ -568,6 +642,9 @@ export async function createJointBoothProposalByEmail(input: {
   requesterAvailableBalance: number;
   partnerBoothPrice: number;
   expectedMonthlyIncome: number;
+  packageType?: BoothPackageType;
+  mouSignedAt?: Date;
+  referralEconomyBooths?: number;
   selectedBoothType: BoothSelectionType;
   notes?: string;
 }) {
@@ -585,6 +662,9 @@ export async function createJointBoothProposalByEmail(input: {
     requesterAvailableBalance: input.requesterAvailableBalance,
     partnerBoothPrice: input.partnerBoothPrice,
     expectedMonthlyIncome: input.expectedMonthlyIncome,
+    packageType: input.packageType,
+    mouSignedAt: input.mouSignedAt,
+    referralEconomyBooths: input.referralEconomyBooths,
     selectedBoothType: input.selectedBoothType,
     notes: input.notes,
   });
@@ -610,6 +690,15 @@ export async function setUserFinanceProfileByEmail(input: {
   purchaseTiming: BoothPurchaseTiming;
   purchaseDayOverride?: number | null;
   openingBalance?: number;
+  idleCashTarget?: number;
+  holdingCapitalTarget?: number;
+  holdingContributionPct?: number;
+  holdingLaunchDate?: Date;
+  pt2BuildCapitalTarget?: number;
+  pt2ContributionPct?: number;
+  pt2LaunchDate?: Date;
+  renewEconomyBoothContracts?: boolean;
+  renewExclusiveBoothContracts?: boolean;
 }) {
   const user = await ensureAppUserByEmail({ email: input.email });
   return upsertUserFinanceProfile({
@@ -619,5 +708,14 @@ export async function setUserFinanceProfileByEmail(input: {
     purchaseTiming: input.purchaseTiming,
     purchaseDayOverride: input.purchaseDayOverride,
     openingBalance: input.openingBalance,
+    idleCashTarget: input.idleCashTarget,
+    holdingCapitalTarget: input.holdingCapitalTarget,
+    holdingContributionPct: input.holdingContributionPct,
+    holdingLaunchDate: input.holdingLaunchDate,
+    pt2BuildCapitalTarget: input.pt2BuildCapitalTarget,
+    pt2ContributionPct: input.pt2ContributionPct,
+    pt2LaunchDate: input.pt2LaunchDate,
+    renewEconomyBoothContracts: input.renewEconomyBoothContracts,
+    renewExclusiveBoothContracts: input.renewExclusiveBoothContracts,
   });
 }

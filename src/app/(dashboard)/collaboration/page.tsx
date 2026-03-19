@@ -1,5 +1,7 @@
 import {
   BoothPurchaseTiming,
+  BoothPackageType,
+  CategoryType,
   BoothSelectionType,
   ProposalStatus,
 } from "@prisma/client";
@@ -82,6 +84,9 @@ export default async function CollaborationPage({
     );
     const partnerBoothPrice = Number(formData.get("partnerBoothPrice") ?? 0);
     const expectedMonthlyIncome = Number(formData.get("expectedMonthlyIncome") ?? 0);
+    const packageTypeRaw = String(formData.get("packageType") ?? BoothPackageType.ECONOMY);
+    const mouSignedAtRaw = String(formData.get("mouSignedAt") ?? "");
+    const referralEconomyBooths = Number(formData.get("referralEconomyBooths") ?? 0);
     const selection = String(formData.get("selectedBoothType") ?? "NEW_BOOTH");
     const notes = String(formData.get("notes") ?? "");
 
@@ -89,6 +94,29 @@ export default async function CollaborationPage({
       selection === BoothSelectionType.EXISTING_BOOTH
         ? BoothSelectionType.EXISTING_BOOTH
         : BoothSelectionType.NEW_BOOTH;
+
+    const packageType =
+      packageTypeRaw === BoothPackageType.EXCLUSIVE
+        ? BoothPackageType.EXCLUSIVE
+        : BoothPackageType.ECONOMY;
+
+    if (packageType === BoothPackageType.EXCLUSIVE) {
+      if (boothPrice + partnerBoothPrice < 20_000_000) {
+        redirect(
+          `/collaboration?${userQuery}&error=${encodeURIComponent(
+            "Exclusive package requires total capital at least Rp 20.000.000",
+          )}`,
+        );
+      }
+
+      if (referralEconomyBooths > 0) {
+        redirect(
+          `/collaboration?${userQuery}&error=${encodeURIComponent(
+            "Referral economy commission only applies to economy package",
+          )}`,
+        );
+      }
+    }
 
     try {
       const result = await createJointBoothProposalByEmail({
@@ -99,6 +127,9 @@ export default async function CollaborationPage({
         requesterAvailableBalance,
         partnerBoothPrice,
         expectedMonthlyIncome,
+        packageType,
+        mouSignedAt: mouSignedAtRaw ? new Date(mouSignedAtRaw) : undefined,
+        referralEconomyBooths,
         selectedBoothType,
         notes: notes || undefined,
       });
@@ -169,6 +200,17 @@ export default async function CollaborationPage({
     const monthlyExpenseMin = Number(formData.get("monthlyExpenseMin") ?? 0);
     const monthlyExpenseMax = Number(formData.get("monthlyExpenseMax") ?? 0);
     const openingBalance = Number(formData.get("openingBalance") ?? 0);
+    const idleCashTarget = Number(formData.get("idleCashTarget") ?? 0);
+    const holdingCapitalTarget = Number(formData.get("holdingCapitalTarget") ?? 0);
+    const holdingContributionPct = Number(formData.get("holdingContributionPct") ?? 0);
+    const holdingLaunchDateRaw = String(formData.get("holdingLaunchDate") ?? "");
+    const pt2BuildCapitalTarget = Number(formData.get("pt2BuildCapitalTarget") ?? 0);
+    const pt2ContributionPct = Number(formData.get("pt2ContributionPct") ?? 0);
+    const pt2LaunchDateRaw = String(formData.get("pt2LaunchDate") ?? "");
+    const renewEconomyBoothContracts =
+      String(formData.get("renewEconomyBoothContracts") ?? "").toLowerCase() === "on";
+    const renewExclusiveBoothContracts =
+      String(formData.get("renewExclusiveBoothContracts") ?? "").toLowerCase() === "on";
     const purchaseTimingRaw = String(
       formData.get("purchaseTiming") ?? BoothPurchaseTiming.START_OF_MONTH,
     );
@@ -185,6 +227,15 @@ export default async function CollaborationPage({
         monthlyExpenseMin,
         monthlyExpenseMax,
         openingBalance,
+        idleCashTarget,
+        holdingCapitalTarget,
+        holdingContributionPct,
+        holdingLaunchDate: holdingLaunchDateRaw ? new Date(holdingLaunchDateRaw) : undefined,
+        pt2BuildCapitalTarget,
+        pt2ContributionPct,
+        pt2LaunchDate: pt2LaunchDateRaw ? new Date(pt2LaunchDateRaw) : undefined,
+        renewEconomyBoothContracts,
+        renewExclusiveBoothContracts,
         purchaseTiming,
         purchaseDayOverride: purchaseDayRaw > 0 ? purchaseDayRaw : null,
       });
@@ -201,16 +252,34 @@ export default async function CollaborationPage({
     const ownerEmail = String(formData.get("ownerEmail") ?? "");
     const name = String(formData.get("incomeName") ?? "");
     const amount = Number(formData.get("incomeAmount") ?? 0);
-    const payoutDate = Number(formData.get("incomePayoutDate") ?? 1);
+    const payoutDateRaw = Number(formData.get("incomePayoutDate") ?? 1);
+    const isRecurring =
+      String(formData.get("incomeIsRecurring") ?? "").toLowerCase() === "on";
+    const expectedDateRaw = String(formData.get("incomeExpectedDate") ?? "");
+    const categoryRaw = String(formData.get("incomeCategory") ?? "SALARY");
+
+    const allowedCategories = new Set<CategoryType>([
+      CategoryType.SALARY,
+      CategoryType.PROJECT,
+      CategoryType.COMMISSION,
+      CategoryType.SAAS,
+      CategoryType.BOOTH,
+      CategoryType.STOCK,
+    ]);
+
+    const category = allowedCategories.has(categoryRaw as CategoryType)
+      ? (categoryRaw as CategoryType)
+      : CategoryType.SALARY;
 
     try {
       await createIncomeSourceByEmail({
         ownerEmail,
         name,
         amount,
-        payoutDate,
-        isRecurring: true,
-        category: "SALARY",
+        payoutDate: isRecurring ? payoutDateRaw : null,
+        expectedDate: !isRecurring && expectedDateRaw ? new Date(expectedDateRaw) : null,
+        isRecurring,
+        category,
       });
       redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Income schedule saved")}`);
     } catch (error: unknown) {
@@ -308,6 +377,110 @@ export default async function CollaborationPage({
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="idle-cash-target" className="block text-sm font-medium">Idle Cash Target (Rp)</label>
+                <input
+                  id="idle-cash-target"
+                  name="idleCashTarget"
+                  type="number"
+                  min={0}
+                  defaultValue={workspace.financeProfile?.idleCashTarget ?? 1_000_000_000}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="holding-capital-target" className="block text-sm font-medium">Holding Total Capital (Rp)</label>
+                <input
+                  id="holding-capital-target"
+                  name="holdingCapitalTarget"
+                  type="number"
+                  min={0}
+                  defaultValue={workspace.financeProfile?.holdingCapitalTarget ?? 1_500_000_000}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="holding-contribution-pct" className="block text-sm font-medium">Your Holding Share (%)</label>
+                <input
+                  id="holding-contribution-pct"
+                  name="holdingContributionPct"
+                  type="number"
+                  min={0}
+                  max={100}
+                  defaultValue={workspace.financeProfile?.holdingContributionPct ?? 50}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="holding-launch-date" className="block text-sm font-medium">Holding Launch Date</label>
+                <input
+                  id="holding-launch-date"
+                  name="holdingLaunchDate"
+                  type="date"
+                  defaultValue={workspace.financeProfile?.holdingLaunchDate ? new Date(workspace.financeProfile.holdingLaunchDate).toISOString().slice(0, 10) : "2028-07-01"}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="pt2-build-capital-target" className="block text-sm font-medium">PT 2 Build Target (Rp)</label>
+                <input
+                  id="pt2-build-capital-target"
+                  name="pt2BuildCapitalTarget"
+                  type="number"
+                  min={0}
+                  defaultValue={workspace.financeProfile?.pt2BuildCapitalTarget ?? 8_000_000_000}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="pt2-contribution-pct" className="block text-sm font-medium">Your PT 2 Urunan Share (%)</label>
+                <input
+                  id="pt2-contribution-pct"
+                  name="pt2ContributionPct"
+                  type="number"
+                  min={0}
+                  max={100}
+                  defaultValue={workspace.financeProfile?.pt2ContributionPct ?? 50}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="pt2-launch-date" className="block text-sm font-medium">PT 2 Build Target Date</label>
+              <input
+                id="pt2-launch-date"
+                name="pt2LaunchDate"
+                type="date"
+                defaultValue={workspace.financeProfile?.pt2LaunchDate ? new Date(workspace.financeProfile.pt2LaunchDate).toISOString().slice(0, 10) : "2030-01-01"}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+              />
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="renewEconomyBoothContracts"
+                defaultChecked={workspace.financeProfile?.renewEconomyBoothContracts ?? true}
+              />
+              Auto-renew booth ekonomi after 2 years (reinvest returned capital)
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="renewExclusiveBoothContracts"
+                defaultChecked={workspace.financeProfile?.renewExclusiveBoothContracts ?? true}
+              />
+              Auto-renew booth exclusive every 4 years (capital top-up)
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="opening-balance" className="block text-sm font-medium">Opening Balance (Rp)</label>
@@ -420,6 +593,28 @@ export default async function CollaborationPage({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label htmlFor="income-category" className="block text-sm font-medium">Category</label>
+                  <select
+                    id="income-category"
+                    name="incomeCategory"
+                    defaultValue="SALARY"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                  >
+                    <option value="SALARY">Salary</option>
+                    <option value="PROJECT">Freelance / Project</option>
+                    <option value="COMMISSION">Commission</option>
+                    <option value="SAAS">SaaS</option>
+                    <option value="BOOTH">Booth</option>
+                    <option value="STOCK">Saham (aktif setelah Holding Launch)</option>
+                  </select>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm mt-6">
+                  <input type="checkbox" name="incomeIsRecurring" defaultChecked />
+                  Recurring income
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label htmlFor="income-amount" className="block text-sm font-medium">Amount (Rp)</label>
                   <input
                     id="income-amount"
@@ -442,6 +637,15 @@ export default async function CollaborationPage({
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
                   />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="income-expected-date" className="block text-sm font-medium">Expected Date (for non-recurring)</label>
+                <input
+                  id="income-expected-date"
+                  name="incomeExpectedDate"
+                  type="date"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
               </div>
               <button className="rounded-xl px-4 py-2 bg-slate-700 text-white hover:bg-slate-800" type="submit">
                 Save Income Schedule
@@ -527,6 +731,45 @@ export default async function CollaborationPage({
               type="number"
               min={1}
               defaultValue={1_000_000}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-package-type" className="block text-sm font-medium mb-1">Package Type</label>
+            <select
+              id="proposal-package-type"
+              name="packageType"
+              defaultValue={BoothPackageType.ECONOMY}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            >
+              <option value={BoothPackageType.ECONOMY}>Ekonomis (payout H+1 MoU)</option>
+              <option value={BoothPackageType.EXCLUSIVE}>Eksklusif 20jt (payout di tanggal MoU)</option>
+            </select>
+            <p className="mt-1 text-xs text-slate-500">
+              Exclusive: minimum total modal Rp 20.000.000 dan tidak memakai referral economy commission.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="proposal-mou-date" className="block text-sm font-medium mb-1">MoU Sign Date</label>
+            <input
+              id="proposal-mou-date"
+              name="mouSignedAt"
+              type="date"
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-referrals" className="block text-sm font-medium mb-1">Referral Economy Booths (commission H+3)</label>
+            <input
+              id="proposal-referrals"
+              name="referralEconomyBooths"
+              type="number"
+              min={0}
+              defaultValue={0}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
             />
           </div>
