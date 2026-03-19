@@ -1,4 +1,5 @@
 import { getAppUserByEmail } from "@/actions/collaboration";
+import { SoftDecorShapes } from "@/components/layout/SoftDecorShapes";
 import { getSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
 import { LoginSubmitButton } from "./LoginSubmitButton";
 import { redirect } from "next/navigation";
@@ -44,6 +45,7 @@ export default async function LoginPage({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[36vh] bg-linear-to-r from-[#7e86e8] via-[#9198ef] to-[#7e86e8]" />
       <div className="pointer-events-none absolute -right-12 top-10 h-56 w-56 rounded-full bg-white/25 blur-3xl" />
       <div className="pointer-events-none absolute -left-10 bottom-8 h-52 w-52 rounded-full bg-violet-200/40 blur-3xl dark:bg-violet-500/20" />
+      <SoftDecorShapes variant="auth" />
 
       <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/55 bg-card/82 p-6 shadow-[0_35px_65px_-38px_rgba(78,86,160,0.95)] ring-1 ring-white/65 backdrop-blur-xl animate-lift-in dark:ring-white/10">
         <h1 className="text-2xl font-bold mb-1">Login</h1>
