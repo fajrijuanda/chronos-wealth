@@ -87,7 +87,7 @@ export function SimulationSettingsDialog({
             Edit Finance Profile
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Finance Profile Settings</DialogTitle>
           <DialogDescription>
@@ -97,8 +97,9 @@ export function SimulationSettingsDialog({
         <form action={handleSubmit} className="space-y-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-                <label className="text-sm font-medium">Min Monthly Expense (Rp)</label>
+              <label htmlFor="sim-min-monthly-expense" className="text-sm font-medium">Min Monthly Expense (Rp)</label>
                 <input
+                id="sim-min-monthly-expense"
                     name="monthlyExpenseMin"
                     type="number"
                     required
@@ -107,8 +108,9 @@ export function SimulationSettingsDialog({
                 />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium">Max Monthly Expense (Rp)</label>
+              <label htmlFor="sim-max-monthly-expense" className="text-sm font-medium">Max Monthly Expense (Rp)</label>
                 <input
+                id="sim-max-monthly-expense"
                     name="monthlyExpenseMax"
                     type="number"
                     required
@@ -120,8 +122,9 @@ export function SimulationSettingsDialog({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-                <label className="text-sm font-medium">Purchase Timing</label>
+              <label htmlFor="sim-purchase-timing" className="text-sm font-medium">Purchase Timing</label>
                 <select
+                id="sim-purchase-timing"
                     name="purchaseTiming"
                     defaultValue={profile?.purchaseTiming ?? "END_OF_MONTH"}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
@@ -148,8 +151,9 @@ export function SimulationSettingsDialog({
             <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">Strategic Targets</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Idle Cash Target (Rp)</label>
+                  <label htmlFor="sim-idle-cash-target" className="text-sm font-medium">Idle Cash Target (Rp)</label>
                     <input
+                    id="sim-idle-cash-target"
                         name="idleCashTarget"
                         type="number"
                         defaultValue={profile?.idleCashTarget ?? 1000000000}
@@ -157,8 +161,9 @@ export function SimulationSettingsDialog({
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Opening Balance (Rp)</label>
+                  <label htmlFor="sim-opening-balance" className="text-sm font-medium">Opening Balance (Rp)</label>
                     <input
+                    id="sim-opening-balance"
                         name="openingBalance"
                         type="number"
                         defaultValue={profile?.openingBalance ?? 0}
@@ -176,7 +181,7 @@ export function SimulationSettingsDialog({
                         name="renewEconomyBoothContracts" 
                         type="checkbox" 
                         defaultChecked={profile?.renewEconomyBoothContracts ?? true}
-                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" 
+                    className="shrink-0" 
                     />
                     <span className="text-sm font-medium">Renew Economy Booth Contracts otomatis?</span>
                 </label>
@@ -185,7 +190,7 @@ export function SimulationSettingsDialog({
                         name="renewExclusiveBoothContracts" 
                         type="checkbox" 
                         defaultChecked={profile?.renewExclusiveBoothContracts ?? true}
-                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" 
+                    className="shrink-0" 
                     />
                     <span className="text-sm font-medium">Renew Exclusive Booth Contracts otomatis?</span>
                 </label>

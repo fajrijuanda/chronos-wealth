@@ -102,6 +102,9 @@ model Booth {
   id                               String              @id @default(cuid())
   name                             String              @unique
   expectedMonthlyIncome            Float
+  mouDocumentName                  String?
+  mouDocumentMimeType              String?
+  mouDocumentData                  Bytes?
   isShared                         Boolean             @default(false)
   active                           Boolean             @default(true)
   createdAt                        DateTime            @default(now())

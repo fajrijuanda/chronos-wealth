@@ -5,6 +5,7 @@ import {
   BoothPackageType,
   BoothPurchaseTiming,
   BoothSelectionType,
+  CategoryType,
   FriendshipStatus,
   ProposalStatus,
 } from "@prisma/client";
@@ -29,6 +30,20 @@ function ensurePositive(value: number, fieldName: string) {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${fieldName} must be a positive number`);
   }
+}
+
+function computeBoothRecurringPayoutDay(mouSignedAt: Date, packageType: BoothPackageType) {
+  const mouDay = mouSignedAt.getDate();
+  if (packageType === BoothPackageType.EXCLUSIVE) {
+    return mouDay;
+  }
+
+  const nextDay = mouDay + 1;
+  return nextDay > 31 ? 1 : nextDay;
+}
+
+function decodeBase64ToBytes(base64: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(base64, "base64"));
 }
 
 function formatDisplayNameFromEmail(email: string) {
@@ -199,6 +214,9 @@ export async function decideBoothPurchaseStrategy(input: {
   expectedMonthlyIncome: number;
   packageType?: BoothPackageType;
   mouSignedAt?: Date;
+  mouDocumentName?: string;
+  mouDocumentMimeType?: string;
+  mouDocumentBase64?: string;
   referralEconomyBooths?: number;
   selectedBoothType: BoothSelectionType;
   notes?: string;
@@ -209,18 +227,30 @@ export async function decideBoothPurchaseStrategy(input: {
   if (input.requesterAvailableBalance >= input.boothPrice) {
     const booth = await prisma.$transaction(async (tx) => {
       const isExclusive = (input.packageType ?? BoothPackageType.ECONOMY) === BoothPackageType.EXCLUSIVE;
+      const packageType = input.packageType ?? BoothPackageType.ECONOMY;
+      const mouSignedAt = input.mouSignedAt ?? new Date();
+      const payoutDate = computeBoothRecurringPayoutDay(mouSignedAt, packageType);
       const existingBooth = await tx.booth.findUnique({ where: { name: input.boothName } });
       if (existingBooth) {
           throw new Error(`Booth with name "${input.boothName}" already exists in the system.`);
       }
+
+      const mouDocumentName = input.mouDocumentName?.trim();
+      const mouDocumentMimeType = input.mouDocumentMimeType?.trim();
+      const mouDocumentData = input.mouDocumentBase64
+        ? decodeBase64ToBytes(input.mouDocumentBase64)
+        : null;
 
       const createdBooth = await tx.booth.create({
         data: {
           name: input.boothName,
           expectedMonthlyIncome: input.expectedMonthlyIncome,
           boothUnitCount: isExclusive ? 2 : 1,
-          packageType: input.packageType ?? BoothPackageType.ECONOMY,
-          mouSignedAt: input.mouSignedAt ?? new Date(),
+          packageType,
+          mouSignedAt,
+          mouDocumentName: mouDocumentName || null,
+          mouDocumentMimeType: mouDocumentMimeType || null,
+          mouDocumentData,
           contractDurationMonths: isExclusive ? 48 : 24,
           exclusiveRenewalCapital: isExclusive ? 20_000_000 : 20_000_000,
           referralEconomyBooths: input.referralEconomyBooths ?? 0,
@@ -234,6 +264,19 @@ export async function decideBoothPurchaseStrategy(input: {
           userId: input.requesterId,
           capitalAmount: input.boothPrice,
           revenueSharePct: 100,
+        },
+      });
+
+      await tx.incomeSource.create({
+        data: {
+          ownerUserId: input.requesterId,
+          name: `${input.boothName} (Booth)`,
+          category: CategoryType.BOOTH,
+          amount: input.expectedMonthlyIncome,
+          isRecurring: true,
+          payoutDate,
+          expectedDate: null,
+          isActive: true,
         },
       });
 
@@ -316,6 +359,9 @@ export async function reviewJointBoothProposal(input: {
   const totalCapital = proposal.requesterCapital + proposal.partnerCapital;
   const requesterSharePct = (proposal.requesterCapital / totalCapital) * 100;
   const partnerSharePct = (proposal.partnerCapital / totalCapital) * 100;
+  const requesterIncomeAmount = proposal.expectedMonthlyIncome * (requesterSharePct / 100);
+  const partnerIncomeAmount = proposal.expectedMonthlyIncome * (partnerSharePct / 100);
+  const payoutDate = computeBoothRecurringPayoutDay(proposal.mouSignedAt, proposal.packageType);
 
   const approvedProposal = await prisma.$transaction(async (tx) => {
     const isExclusive = proposal.packageType === BoothPackageType.EXCLUSIVE;
@@ -346,6 +392,31 @@ export async function reviewJointBoothProposal(input: {
           userId: proposal.partnerId,
           capitalAmount: proposal.partnerCapital,
           revenueSharePct: partnerSharePct,
+        },
+      ],
+    });
+
+    await tx.incomeSource.createMany({
+      data: [
+        {
+          ownerUserId: proposal.requesterId,
+          name: `${proposal.boothName} (Booth)`,
+          category: CategoryType.BOOTH,
+          amount: requesterIncomeAmount,
+          isRecurring: true,
+          payoutDate,
+          expectedDate: null,
+          isActive: true,
+        },
+        {
+          ownerUserId: proposal.partnerId,
+          name: `${proposal.boothName} (Booth)`,
+          category: CategoryType.BOOTH,
+          amount: partnerIncomeAmount,
+          isRecurring: true,
+          payoutDate,
+          expectedDate: null,
+          isActive: true,
         },
       ],
     });
@@ -714,6 +785,9 @@ export async function createJointBoothProposalByEmail(input: {
   expectedMonthlyIncome: number;
   packageType?: BoothPackageType;
   mouSignedAt?: Date;
+  mouDocumentName?: string;
+  mouDocumentMimeType?: string;
+  mouDocumentBase64?: string;
   referralEconomyBooths?: number;
   selectedBoothType: BoothSelectionType;
   notes?: string;
@@ -734,6 +808,9 @@ export async function createJointBoothProposalByEmail(input: {
     expectedMonthlyIncome: input.expectedMonthlyIncome,
     packageType: input.packageType,
     mouSignedAt: input.mouSignedAt,
+    mouDocumentName: input.mouDocumentName,
+    mouDocumentMimeType: input.mouDocumentMimeType,
+    mouDocumentBase64: input.mouDocumentBase64,
     referralEconomyBooths: input.referralEconomyBooths,
     selectedBoothType: input.selectedBoothType,
     notes: input.notes,

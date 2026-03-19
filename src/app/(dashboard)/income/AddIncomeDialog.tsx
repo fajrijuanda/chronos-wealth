@@ -61,7 +61,7 @@ export function AddIncomeDialog({ email }: { email: string }) {
           Add Income
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Add New Income Source</DialogTitle>
           <DialogDescription>
@@ -70,8 +70,9 @@ export function AddIncomeDialog({ email }: { email: string }) {
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Nama Pendapatan</label>
+            <label htmlFor="income-name" className="text-sm font-medium">Nama Pendapatan</label>
             <input
+              id="income-name"
               name="name"
               required
               className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
@@ -80,8 +81,9 @@ export function AddIncomeDialog({ email }: { email: string }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Jumlah (Rp)</label>
+              <label htmlFor="income-amount" className="text-sm font-medium">Jumlah (Rp)</label>
               <input
+                id="income-amount"
                 name="amount"
                 type="number"
                 required
@@ -90,18 +92,16 @@ export function AddIncomeDialog({ email }: { email: string }) {
               />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium">Kategori</label>
+                <label htmlFor="income-category" className="text-sm font-medium">Kategori</label>
                 <select
+                    id="income-category"
                     name="category"
                     required
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                className="w-full px-4 py-2"
                 >
                     <option value="SALARY">Salary</option>
                     <option value="PROJECT">Project / Freelance</option>
                     <option value="COMMISSION">Commission</option>
-                    <option value="BOOTH">Booth Business</option>
-                    <option value="STOCK">Dividen / Saham</option>
-                    <option value="SAAS">SaaS Business</option>
                 </select>
             </div>
           </div>
@@ -112,7 +112,7 @@ export function AddIncomeDialog({ email }: { email: string }) {
                 name="isRecurring" 
                 id="isRecurring" 
                 defaultChecked 
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                className="shrink-0"
             />
             <label htmlFor="isRecurring" className="text-sm font-medium">Rutin Bulanan (Recurring)</label>
           </div>
@@ -121,8 +121,9 @@ export function AddIncomeDialog({ email }: { email: string }) {
             <div className="space-y-2">
                 <label className="text-sm font-medium italic text-slate-500">Jika Rutin:</label>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm">Dibayar setiap tanggal</span>
+                  <label htmlFor="income-payout-date" className="text-sm">Dibayar setiap tanggal</label>
                     <input
+                    id="income-payout-date"
                         name="payoutDate"
                         type="number"
                         min={1}
@@ -133,8 +134,9 @@ export function AddIncomeDialog({ email }: { email: string }) {
                 </div>
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium italic text-slate-500">Jika Sekali Jalan:</label>
+              <label htmlFor="income-expected-date" className="text-sm font-medium italic text-slate-500">Jika Sekali Jalan:</label>
                 <input
+                id="income-expected-date"
                     name="expectedDate"
                     type="date"
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
