@@ -1,6 +1,6 @@
 import { simulateCollaborativeGrowth, simulateSingleUserGrowth } from "@/actions/simulation";
 import { getCollaborationWorkspace } from "@/actions/collaboration";
-import { Calculator, Users, TrendingUp, CalendarDays, ArrowUpRight } from "lucide-react";
+import { Calculator, CalendarDays, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CsvActions } from "@/components/simulation/CsvActions";
 import { formatGroupedNumber } from "@/lib/number-format";
@@ -18,6 +18,8 @@ type SimulationParticipantView = {
   boothPrice: number;
   monthlyExpense: number;
   purchaseTiming: "START_OF_MONTH" | "END_OF_MONTH";
+  includeHoldingPlan: boolean;
+  includePt2Plan: boolean;
   idleCashTarget: number;
   holdingFundAccumulated: number;
   personalHoldingTarget: number;
@@ -267,6 +269,8 @@ export default async function SimulationPage({
   const eventFilterRaw = typeof sp.eventFilter === "string" ? sp.eventFilter : "all";
   const delimiterRaw = typeof sp.delimiter === "string" ? sp.delimiter : "comma";
   const includePt2CsvRaw = typeof sp.includePt2Csv === "string" ? sp.includePt2Csv : "yes";
+  const includeHoldingPlan = typeof sp.includeHolding === "string" && sp.includeHolding === "yes";
+  const includePt2Plan = typeof sp.includePt2 === "string" && sp.includePt2 === "yes";
   const eventFilter: EventFilter =
     eventFilterRaw === "renewal" ||
     eventFilterRaw === "capital_return" ||
@@ -290,10 +294,14 @@ export default async function SimulationPage({
         targetDate,
         primaryEmail: activeEmail,
         partnerEmail: selectedFriend.friend.email,
+        includeHoldingPlan,
+        includePt2Plan,
       })
     : await simulateSingleUserGrowth({
         targetDate,
         email: activeEmail,
+        includeHoldingPlan,
+        includePt2Plan,
       });
 
   const partnerParticipant = "partner" in simulation ? simulation.partner : null;
@@ -321,6 +329,12 @@ export default async function SimulationPage({
   });
   const combinedPt2Fund = participants.reduce((acc, user) => acc + user.pt2FundAccumulated, 0);
   const combinedPt2Target = participants.reduce((acc, user) => acc + user.personalPt2Target, 0);
+  const showHoldingPlan = participants.some(
+    (user) => user.includeHoldingPlan && user.personalHoldingTarget > 0,
+  );
+  const showPt2Plan = participants.some(
+    (user) => user.includePt2Plan && user.personalPt2Target > 0,
+  );
 
   return (
     <div className="space-y-8 pb-10">
@@ -333,8 +347,8 @@ export default async function SimulationPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 rounded-3xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm h-fit space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-1 surface-card p-6 h-fit space-y-6 lg:sticky lg:top-20">
           <div className="flex items-center gap-3 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-4">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
               <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -342,7 +356,7 @@ export default async function SimulationPage({
             <h2 className="font-bold text-lg">Simulation Controls</h2>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/70 dark:bg-slate-900/40 p-4 space-y-3">
+          <div className="surface-card-soft p-4 space-y-3">
             <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
               <ArrowUpRight className="h-4 w-4 text-indigo-500" />
               <h3 className="font-semibold">Acuan Harga Dasar Booth</h3>
@@ -429,6 +443,31 @@ export default async function SimulationPage({
                 </div>
             </div>
 
+            <div className="space-y-3 rounded-xl border border-slate-200/70 dark:border-slate-800 p-3">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Target Plans for Simulation</p>
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  name="includeHolding"
+                  value="yes"
+                  defaultChecked={includeHoldingPlan}
+                />
+                Include Holding Capital Plan
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  name="includePt2"
+                  value="yes"
+                  defaultChecked={includePt2Plan}
+                />
+                Include PT 2 Urunan Plan
+              </label>
+              <p className="text-[11px] text-slate-500">
+                Target Holding/PT2 hanya dihitung jika dipilih di sini.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <label htmlFor="sim-event-filter" className="text-xs font-black uppercase tracking-widest text-slate-400">
                 Timeline Filter
@@ -464,47 +503,98 @@ export default async function SimulationPage({
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-2xl bg-linear-to-br from-blue-600 to-indigo-700 p-8 shadow-lg text-white">
-            <h3 className="text-blue-100 font-medium mb-2">
-              {participants.length > 1 ? "Combined" : "Projected"} Income on {formatJakartaDate(targetDate)}
-            </h3>
-            <p className="text-5xl font-bold tracking-tight">
+          <div className="surface-card p-6">
+            <p className="text-xs uppercase tracking-widest font-semibold text-body-muted mb-2">
+              {participants.length > 1 ? "Combined" : "Projected"} Result • {formatJakartaDate(targetDate)}
+            </p>
+            <p className="text-4xl md:text-5xl font-bold tracking-tight text-title">
               Rp {formatGroupedNumber(Math.max(0, simulation.combined.totalProjectedIncome))}
             </p>
-            <div className="mt-8 pt-6 border-t border-blue-400/30 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-100">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-200" />
-                Total Booth Equivalent: {simulation.combined.totalBoothEquivalent.toFixed(2)}
+            <div className={`mt-6 grid grid-cols-1 ${showPt2Plan ? "md:grid-cols-3" : "md:grid-cols-2"} gap-3`}>
+              <div className="surface-card-soft px-4 py-3">
+                <p className="text-[11px] uppercase tracking-wider text-body-muted">Total Booth Equivalent</p>
+                <p className="text-lg font-bold text-projection">{simulation.combined.totalBoothEquivalent.toFixed(2)} Eq.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-emerald-200" />
-                Kalkulasi memperhitungkan cashflow bulanan sebelum dan sesudah tanggal pembelian booth.
+              <div className="surface-card-soft px-4 py-3">
+                <p className="text-[11px] uppercase tracking-wider text-body-muted">Participants</p>
+                <p className="text-lg font-bold text-collab">{participants.length} User</p>
               </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-cyan-200" />
-                Total PT2 Urunan: Rp {formatGroupedNumber(combinedPt2Fund)} / Rp {formatGroupedNumber(combinedPt2Target)}
-              </div>
+              {showPt2Plan ? (
+                <div className="surface-card-soft px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-wider text-body-muted">PT2 Progress</p>
+                  <p className="text-lg font-bold text-goal">
+                    Rp {formatGroupedNumber(combinedPt2Fund)} / {formatGroupedNumber(combinedPt2Target)}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
 
           <div className={`grid grid-cols-1 ${participants.length > 1 ? "xl:grid-cols-2" : ""} gap-6`}>
             {participants.map((user) => (
-              <div key={user.userId} className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+              <div key={user.userId} className="surface-card p-6">
                 <h3 className="text-lg font-semibold mb-1">{user.displayName}</h3>
                 <p className="text-xs text-slate-500 mb-4">{user.email}</p>
 
-                <div className="space-y-2 text-sm">
-                  <p>Harga Booth: Rp {formatGroupedNumber(user.boothPrice)}</p>
-                  <p>Budget Bulanan Simulasi: Rp {formatGroupedNumber(user.monthlyExpense)}</p>
-                  <p>Timing Beli: {user.purchaseTiming === "START_OF_MONTH" ? "Awal Bulan" : "Akhir Bulan"}</p>
-                  <p>Idle Cash Target: Rp {formatGroupedNumber(user.idleCashTarget)}</p>
-                  <p>Holding Fund: Rp {formatGroupedNumber(user.holdingFundAccumulated)} / Rp {formatGroupedNumber(user.personalHoldingTarget)}</p>
-                  <p>Holding Launch: {formatJakartaDate(user.holdingLaunchDate)}</p>
-                  <p>PT 2 Urunan Fund: Rp {formatGroupedNumber(user.pt2FundAccumulated)} / Rp {formatGroupedNumber(user.personalPt2Target)}</p>
-                  <p>PT 2 Target Date: {formatJakartaDate(user.pt2LaunchDate)}</p>
-                  <p>Booth Equivalent Saat Ini: {user.boothEquivalentOwned.toFixed(2)}</p>
-                  <p>Projected Monthly Income: Rp {formatGroupedNumber(user.projectedMonthlyIncome)}</p>
-                  <p>Target Booth Equivalent: {user.targetBoothEquivalent}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div className="surface-card-soft px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Harga Booth</p>
+                    <p className="font-bold">Rp {formatGroupedNumber(user.boothPrice)}</p>
+                  </div>
+                  <div className="surface-card-soft px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Budget Bulanan</p>
+                    <p className="font-bold">Rp {formatGroupedNumber(user.monthlyExpense)}</p>
+                  </div>
+                  <div className="surface-card-soft px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Timing Beli</p>
+                    <p className="font-bold">{user.purchaseTiming === "START_OF_MONTH" ? "Awal Bulan" : "Akhir Bulan"}</p>
+                  </div>
+                  <div className="surface-card-soft px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Idle Cash Target</p>
+                    <p className="font-bold">Rp {formatGroupedNumber(user.idleCashTarget)}</p>
+                  </div>
+                  <div className="surface-card-soft px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Booth Eq. Saat Ini</p>
+                    <p className="font-bold">{user.boothEquivalentOwned.toFixed(2)}</p>
+                  </div>
+                  <div className="surface-card-soft px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Projected Income</p>
+                    <p className="font-bold text-income">Rp {formatGroupedNumber(user.projectedMonthlyIncome)}</p>
+                  </div>
+                  <div className="surface-card-soft px-3 py-2 sm:col-span-2">
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Target Booth Equivalent</p>
+                    <p className="font-bold">{user.targetBoothEquivalent}</p>
+                  </div>
+
+                  {showHoldingPlan && user.includeHoldingPlan && user.personalHoldingTarget > 0 ? (
+                    <>
+                      <div className="surface-card-soft px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-body-muted">Holding Fund</p>
+                        <p className="font-bold text-goal">
+                          Rp {formatGroupedNumber(user.holdingFundAccumulated)} / {formatGroupedNumber(user.personalHoldingTarget)}
+                        </p>
+                      </div>
+                      <div className="surface-card-soft px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-body-muted">Holding Launch</p>
+                        <p className="font-bold">{formatJakartaDate(user.holdingLaunchDate)}</p>
+                      </div>
+                    </>
+                  ) : null}
+
+                  {showPt2Plan && user.includePt2Plan && user.personalPt2Target > 0 ? (
+                    <>
+                      <div className="surface-card-soft px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-body-muted">PT2 Urunan Fund</p>
+                        <p className="font-bold text-collab">
+                          Rp {formatGroupedNumber(user.pt2FundAccumulated)} / {formatGroupedNumber(user.personalPt2Target)}
+                        </p>
+                      </div>
+                      <div className="surface-card-soft px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-body-muted">PT2 Target Date</p>
+                        <p className="font-bold">{formatJakartaDate(user.pt2LaunchDate)}</p>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -512,7 +602,7 @@ export default async function SimulationPage({
         </div>
       </div>
 
-      <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+      <div className="surface-card p-6">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-indigo-500" />
@@ -552,7 +642,7 @@ export default async function SimulationPage({
             });
 
             return (
-            <div key={user.userId} className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div key={user.userId} className="surface-card overflow-hidden">
               <div className="px-4 py-3 bg-slate-50/60 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="font-semibold">{user.displayName} - Rencana Bulanan</h3>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -571,12 +661,83 @@ export default async function SimulationPage({
                   <span className="inline-flex items-center rounded-md border px-2 py-1 bg-rose-100 text-rose-800 border-rose-200">
                     Ended: {eventSummary.ended}
                   </span>
-                  <span className="inline-flex items-center rounded-md border px-2 py-1 bg-cyan-100 text-cyan-800 border-cyan-200">
-                    PT2: {eventSummary.pt2_contribution}
-                  </span>
+                  {showPt2Plan ? (
+                    <span className="inline-flex items-center rounded-md border px-2 py-1 bg-cyan-100 text-cyan-800 border-cyan-200">
+                      PT2: {eventSummary.pt2_contribution}
+                    </span>
+                  ) : null}
                 </div>
               </div>
-              <div className="overflow-x-auto">
+
+              <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                {user.plans.map((plan) => {
+                  const filteredEvents =
+                    eventFilter === "all"
+                      ? plan.contractEvents
+                      : plan.contractEvents.filter((event) => event.type === eventFilter);
+
+                  return (
+                    <div key={`${user.userId}-${plan.month}-mobile`} className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-sm">{plan.month}</p>
+                        <span className="text-xs font-medium text-slate-500">Buy day: {plan.purchaseDay}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="surface-card-soft px-2.5 py-2">
+                          <p className="text-body-muted">Add Booth</p>
+                          <p className="font-semibold text-projection">{plan.boothsAdded}</p>
+                        </div>
+                        <div className="surface-card-soft px-2.5 py-2">
+                          <p className="text-body-muted">Total Eq.</p>
+                          <p className="font-semibold">{plan.totalBoothsEquivalent.toFixed(2)}</p>
+                        </div>
+                        <div className="surface-card-soft px-2.5 py-2">
+                          <p className="text-body-muted">Booth Income</p>
+                          <p className="font-semibold">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</p>
+                        </div>
+                        <div className="surface-card-soft px-2.5 py-2">
+                          <p className="text-body-muted">End Cash</p>
+                          <p className="font-semibold">Rp {formatGroupedNumber(plan.monthEndCash)}</p>
+                        </div>
+                        {showHoldingPlan ? (
+                          <div className="surface-card-soft px-2.5 py-2">
+                            <p className="text-body-muted">Holding Save</p>
+                            <p className="font-semibold">Rp {formatGroupedNumber(plan.monthlyHoldingSaved)}</p>
+                          </div>
+                        ) : null}
+                        {showPt2Plan ? (
+                          <div className="surface-card-soft px-2.5 py-2">
+                            <p className="text-body-muted">PT2 Save</p>
+                            <p className="font-semibold">Rp {formatGroupedNumber(plan.monthlyPt2Saved)}</p>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="text-xs">
+                        <p className="text-body-muted mb-1">Contract Events</p>
+                        {filteredEvents.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {filteredEvents.map((event, index) => (
+                              <span
+                                key={`${user.userId}-${plan.month}-${event.type}-${index}-mobile`}
+                                className={`inline-flex items-center rounded-md border px-2 py-1 ${getEventBadgeClass(event.type)}`}
+                                title={formatContractEvent(event)}
+                              >
+                                {getEventTypeLabel(event.type)} H{event.day}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 dark:text-slate-400">-</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs uppercase bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
                     <tr>
@@ -585,8 +746,8 @@ export default async function SimulationPage({
                       <th className="px-3 py-2">Add Booth</th>
                       <th className="px-3 py-2">Booth Income</th>
                       <th className="px-3 py-2">Commission</th>
-                      <th className="px-3 py-2">Holding Save</th>
-                      <th className="px-3 py-2">PT 2 Save</th>
+                      {showHoldingPlan ? <th className="px-3 py-2">Holding Save</th> : null}
+                      {showPt2Plan ? <th className="px-3 py-2">PT 2 Save</th> : null}
                       <th className="px-3 py-2">Contract Events</th>
                       <th className="px-3 py-2">Total Eq.</th>
                       <th className="px-3 py-2">End Cash</th>
@@ -606,8 +767,8 @@ export default async function SimulationPage({
                         <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
                         <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</td>
                         <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
-                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyHoldingSaved)}</td>
-                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyPt2Saved)}</td>
+                        {showHoldingPlan ? <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyHoldingSaved)}</td> : null}
+                        {showPt2Plan ? <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyPt2Saved)}</td> : null}
                         <td className="px-3 py-2 text-xs">
                           {filteredEvents.length > 0 ? (
                             <div className="flex flex-wrap gap-1">

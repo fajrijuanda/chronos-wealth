@@ -209,6 +209,8 @@ export async function calculateSimulation(
 async function simulateUserBoothPlan(input: {
   targetDate: Date;
   simUser: SimUserInput;
+  includeHoldingPlan?: boolean;
+  includePt2Plan?: boolean;
 }) {
   const user = await ensureAppUserByEmail({
     email: input.simUser.email,
@@ -261,13 +263,24 @@ async function simulateUserBoothPlan(input: {
   let holdingFundAccumulated = 0;
   let pt2FundAccumulated = 0;
 
+  const includeHoldingPlan = input.includeHoldingPlan ?? false;
+  const includePt2Plan = input.includePt2Plan ?? false;
+
   const idleCashTarget = financeProfile?.idleCashTarget ?? 1_000_000_000;
-  const holdingCapitalTarget = financeProfile?.holdingCapitalTarget ?? 1_500_000_000;
-  const holdingContributionPct = financeProfile?.holdingContributionPct ?? 50;
-  const holdingLaunchDate = financeProfile?.holdingLaunchDate ?? new Date("2028-07-01");
-  const pt2BuildCapitalTarget = financeProfile?.pt2BuildCapitalTarget ?? 8_000_000_000;
-  const pt2ContributionPct = financeProfile?.pt2ContributionPct ?? 50;
-  const pt2LaunchDate = financeProfile?.pt2LaunchDate ?? new Date("2030-01-01");
+  const holdingCapitalTarget = includeHoldingPlan
+    ? (financeProfile?.holdingCapitalTarget ?? 0)
+    : 0;
+  const holdingContributionPct = includeHoldingPlan
+    ? (financeProfile?.holdingContributionPct ?? 0)
+    : 0;
+  const holdingLaunchDate = financeProfile?.holdingLaunchDate ?? new Date();
+  const pt2BuildCapitalTarget = includePt2Plan
+    ? (financeProfile?.pt2BuildCapitalTarget ?? 0)
+    : 0;
+  const pt2ContributionPct = includePt2Plan
+    ? (financeProfile?.pt2ContributionPct ?? 0)
+    : 0;
+  const pt2LaunchDate = financeProfile?.pt2LaunchDate ?? new Date();
   const renewEconomyBoothContracts = financeProfile?.renewEconomyBoothContracts ?? true;
   const renewExclusiveBoothContracts =
     financeProfile?.renewExclusiveBoothContracts ?? true;
@@ -315,6 +328,7 @@ async function simulateUserBoothPlan(input: {
 
     for (const income of incomeSources) {
       if (
+        includeHoldingPlan &&
         income.category === CategoryType.STOCK &&
         startOfMonth(monthDate) < startOfMonth(holdingLaunchDate)
       ) {
@@ -605,6 +619,8 @@ async function simulateUserBoothPlan(input: {
     revenuePerBooth,
     targetBoothEquivalent,
     purchaseTiming,
+    includeHoldingPlan,
+    includePt2Plan,
     monthlyExpense,
     idleCashTarget,
     holdingFundAccumulated,
@@ -623,10 +639,14 @@ export async function simulateCollaborativeGrowth(input: {
   targetDate: Date;
   primaryEmail: string;
   partnerEmail: string;
+  includeHoldingPlan?: boolean;
+  includePt2Plan?: boolean;
 }) {
   const [primary, partner] = await Promise.all([
     simulateUserBoothPlan({
       targetDate: input.targetDate,
+      includeHoldingPlan: input.includeHoldingPlan,
+      includePt2Plan: input.includePt2Plan,
       simUser: {
         email: input.primaryEmail,
         fallbackBoothPrice: 7_500_000,
@@ -639,6 +659,8 @@ export async function simulateCollaborativeGrowth(input: {
     }),
     simulateUserBoothPlan({
       targetDate: input.targetDate,
+      includeHoldingPlan: input.includeHoldingPlan,
+      includePt2Plan: input.includePt2Plan,
       simUser: {
         email: input.partnerEmail,
         fallbackBoothPrice: 9_500_000,
@@ -669,9 +691,13 @@ export async function simulateCollaborativeGrowth(input: {
 export async function simulateSingleUserGrowth(input: {
   targetDate: Date;
   email: string;
+  includeHoldingPlan?: boolean;
+  includePt2Plan?: boolean;
 }) {
   const primary = await simulateUserBoothPlan({
     targetDate: input.targetDate,
+    includeHoldingPlan: input.includeHoldingPlan,
+    includePt2Plan: input.includePt2Plan,
     simUser: {
       email: input.email,
       fallbackBoothPrice: 7_500_000,

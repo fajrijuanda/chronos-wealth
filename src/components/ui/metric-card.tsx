@@ -44,7 +44,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-2xl backdrop-blur-md bg-card/70 border border-border shadow-sm",
+        "rounded-2xl overflow-hidden backdrop-blur-md bg-card/70 border border-border shadow-sm ring-1 ring-white/55 dark:ring-white/5",
         size === "md" ? "p-6" : "px-4 py-3",
         className,
       )}

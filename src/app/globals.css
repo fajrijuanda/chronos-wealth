@@ -176,6 +176,14 @@
 }
 
 @layer utilities {
+  .surface-card {
+    @apply rounded-3xl border border-border bg-card/75 shadow-sm ring-1 ring-white/60 dark:ring-white/5 backdrop-blur-md;
+  }
+
+  .surface-card-soft {
+    @apply rounded-2xl border border-border/80 bg-card/65 shadow-sm ring-1 ring-white/50 dark:ring-white/5 backdrop-blur-md;
+  }
+
   .text-title {
     color: var(--primary);
   }
