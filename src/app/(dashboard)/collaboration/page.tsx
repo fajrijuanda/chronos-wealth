@@ -22,6 +22,7 @@ import { SimulationSettingsDialog } from "../simulation/SimulationSettingsDialog
 import { EditBoothTargetDialog } from "../targets/EditBoothTargetDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MetricCard } from "@/components/ui/metric-card";
 
 export default async function CollaborationPage({
   searchParams,
@@ -141,14 +142,18 @@ export default async function CollaborationPage({
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Current Share</p>
-                  <p className="font-semibold">Rp {formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}</p>
-                </div>
-                <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Revenue/Booth</p>
-                  <p className="font-semibold">Rp {formatGroupedNumber(workspace.targetProgress.revenuePerBooth)}</p>
-                </div>
+                <MetricCard
+                  size="sm"
+                  title="Current Share"
+                  value={`Rp ${formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}`}
+                  tone="income"
+                />
+                <MetricCard
+                  size="sm"
+                  title="Revenue/Booth"
+                  value={`Rp ${formatGroupedNumber(workspace.targetProgress.revenuePerBooth)}`}
+                  tone="goal"
+                />
               </div>
 
               <EditBoothTargetDialog

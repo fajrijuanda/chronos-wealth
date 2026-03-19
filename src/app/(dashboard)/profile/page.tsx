@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MetricCard } from "@/components/ui/metric-card";
 
 export const dynamic = "force-dynamic";
 
@@ -155,18 +156,24 @@ export default async function ProfilePage({
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50 px-4 py-3">
-              <p className="text-xs uppercase font-bold tracking-widest text-slate-400">Connected</p>
-              <p className="text-2xl font-bold">{acceptedCount}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50 px-4 py-3">
-              <p className="text-xs uppercase font-bold tracking-widest text-slate-400">Pending to You</p>
-              <p className="text-2xl font-bold">{pendingInCount}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50 px-4 py-3">
-              <p className="text-xs uppercase font-bold tracking-widest text-slate-400">Your Email</p>
-              <p className="text-sm font-semibold truncate">{currentUser.email}</p>
-            </div>
+            <MetricCard
+              size="sm"
+              title="Connected"
+              value={String(acceptedCount)}
+              tone="collab"
+            />
+            <MetricCard
+              size="sm"
+              title="Pending to You"
+              value={String(pendingInCount)}
+              tone="goal"
+            />
+            <MetricCard
+              size="sm"
+              title="Your Email"
+              value={currentUser.email}
+              tone="projection"
+            />
           </div>
 
           <div className="rounded-3xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
