@@ -15,12 +15,12 @@ type MetricCardProps = {
 };
 
 const toneIconClass: Record<MetricTone, string> = {
-  default: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300",
-  income: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300",
-  expense: "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300",
-  goal: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300",
-  collab: "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300",
-  projection: "bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300",
+  default: "bg-indigo-100/80 text-indigo-600 dark:bg-indigo-900/35 dark:text-indigo-300",
+  income: "bg-emerald-100/80 text-emerald-600 dark:bg-emerald-900/35 dark:text-emerald-300",
+  expense: "bg-rose-100/80 text-rose-600 dark:bg-rose-900/35 dark:text-rose-300",
+  goal: "bg-amber-100/80 text-amber-600 dark:bg-amber-900/35 dark:text-amber-300",
+  collab: "bg-violet-100/80 text-violet-600 dark:bg-violet-900/35 dark:text-violet-300",
+  projection: "bg-sky-100/80 text-sky-600 dark:bg-sky-900/35 dark:text-sky-300",
 };
 
 const toneValueClass: Record<MetricTone, string> = {
@@ -44,7 +44,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-2xl overflow-hidden backdrop-blur-md bg-card/70 border border-border shadow-sm ring-1 ring-white/55 dark:ring-white/5",
+        "rounded-3xl overflow-hidden backdrop-blur-xl bg-card/75 border border-border/85 shadow-[0_18px_34px_-26px_rgba(94,101,182,0.95)] ring-1 ring-white/65 dark:ring-white/10",
         size === "md" ? "p-6" : "px-4 py-3",
         className,
       )}
