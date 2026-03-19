@@ -23,7 +23,7 @@ export default async function OverviewPage({
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="font-display text-3xl font-semibold tracking-tight mb-2">Dashboard Overview</h1>
+                <h1 className="font-display text-2xl font-semibold tracking-tight mb-2 md:text-3xl">Dashboard Overview</h1>
                 <p className="text-muted-foreground">Welcome back. Here is your financial summary.</p>
             </div>
 

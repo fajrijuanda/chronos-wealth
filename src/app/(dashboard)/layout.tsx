@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
+import { DashboardHeroStrip } from "@/components/layout/DashboardHeroStrip";
 import { Navbar } from "@/components/layout/Navbar";
 import { SoftDecorShapes } from "@/components/layout/SoftDecorShapes";
 import { getSessionUserEmail } from "@/lib/auth-session";
@@ -24,7 +25,10 @@ export default async function DashboardLayout({
             <div className="relative z-10 flex flex-col flex-1 min-w-0">
                 <Navbar />
                 <main className="flex-1 w-full p-4 md:p-8 overflow-y-auto">
-                    {children}
+                    <DashboardHeroStrip />
+                    <div className="mt-6">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

@@ -139,6 +139,8 @@
       radial-gradient(circle at 10% 5%, rgba(151, 157, 247, 0.38), transparent 33%),
       radial-gradient(circle at 92% 18%, rgba(191, 196, 255, 0.34), transparent 32%),
       radial-gradient(circle at 25% 92%, rgba(214, 206, 255, 0.22), transparent 38%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 4px),
       linear-gradient(145deg, #ececf6 0%, #e4e5f2 45%, #e9eaf7 100%);
     min-height: 100vh;
   }
@@ -201,6 +203,10 @@
 
   .pastel-pill {
     @apply rounded-full border border-white/70 bg-white/55 px-4 py-2 text-sm font-semibold tracking-wide text-primary shadow-[0_10px_24px_-18px_rgba(116,126,220,0.8)] backdrop-blur-md;
+  }
+
+  .go-chip {
+    @apply inline-flex items-center justify-center rounded-full border border-white/70 bg-white/72 px-5 py-2 text-xs font-bold tracking-[0.07em] text-primary shadow-[0_12px_24px_-20px_rgba(80,89,176,0.95)] backdrop-blur-md transition-transform duration-200 hover:-translate-y-0.5 hover:bg-white/85;
   }
 
   .text-title {
