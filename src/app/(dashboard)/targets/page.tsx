@@ -11,7 +11,7 @@ export default async function TargetsPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const sp = await searchParams;
-    const activeEmail = getActiveUserEmail(
+    const activeEmail = await getActiveUserEmail(
         typeof sp.user === "string" ? sp.user : undefined,
     );
 
