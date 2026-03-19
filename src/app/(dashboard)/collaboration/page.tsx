@@ -16,6 +16,7 @@ import {
 } from "@/actions/collaboration";
 import { createIncomeSourceByEmail } from "@/actions/income";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { formatGroupedNumber } from "@/lib/number-format";
 import { redirect } from "next/navigation";
 
 export default async function CollaborationPage({
@@ -342,8 +343,8 @@ export default async function CollaborationPage({
           </form>
 
           <div className="mt-5 text-sm text-slate-600 dark:text-slate-300 space-y-1">
-            <p>Target Income: Rp {workspace.targetProgress.targetIncome.toLocaleString("id-ID")}</p>
-            <p>Current Monthly Share: Rp {workspace.targetProgress.monthlyIncomeShare.toLocaleString("id-ID")}</p>
+            <p>Target Income: Rp {formatGroupedNumber(workspace.targetProgress.targetIncome)}</p>
+            <p>Current Monthly Share: Rp {formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}</p>
             <p>Booth Equivalent Achieved: {workspace.targetProgress.boothEquivalentAchieved.toFixed(2)}</p>
             <p>Progress: {workspace.targetProgress.progressPct.toFixed(2)}%</p>
           </div>
@@ -816,7 +817,7 @@ export default async function CollaborationPage({
               <div key={proposal.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm">
                 <p className="font-semibold">{proposal.boothName}</p>
                 <p className="text-slate-500">From: {proposal.requester.email}</p>
-                <p>Capital split: Rp {proposal.requesterCapital.toLocaleString("id-ID")} / Rp {proposal.partnerCapital.toLocaleString("id-ID")}</p>
+                <p>Capital split: Rp {formatGroupedNumber(proposal.requesterCapital)} / Rp {formatGroupedNumber(proposal.partnerCapital)}</p>
                 <p>Status: {proposal.status}</p>
 
                 {proposal.status === ProposalStatus.PENDING && (
@@ -853,7 +854,7 @@ export default async function CollaborationPage({
               <div key={proposal.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm">
                 <p className="font-semibold">{proposal.boothName}</p>
                 <p className="text-slate-500">To: {proposal.partner.email}</p>
-                <p>Capital split: Rp {proposal.requesterCapital.toLocaleString("id-ID")} / Rp {proposal.partnerCapital.toLocaleString("id-ID")}</p>
+                <p>Capital split: Rp {formatGroupedNumber(proposal.requesterCapital)} / Rp {formatGroupedNumber(proposal.partnerCapital)}</p>
                 <p>Status: {proposal.status}</p>
               </div>
             ))}
@@ -869,9 +870,9 @@ export default async function CollaborationPage({
             {workspace.portfolio.map((item) => (
               <div key={item.boothId} className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm">
                 <p className="font-semibold">{item.boothName}</p>
-                <p>Expected Monthly Income: Rp {item.expectedMonthlyIncome.toLocaleString("id-ID")}</p>
+                <p>Expected Monthly Income: Rp {formatGroupedNumber(item.expectedMonthlyIncome)}</p>
                 <p>Your Share: {item.revenueSharePct.toFixed(2)}%</p>
-                <p>Your Capital: Rp {item.capitalAmount.toLocaleString("id-ID")}</p>
+                <p>Your Capital: Rp {formatGroupedNumber(item.capitalAmount)}</p>
                 <p>Type: {item.isShared ? "Shared" : "Owned"}</p>
               </div>
             ))}

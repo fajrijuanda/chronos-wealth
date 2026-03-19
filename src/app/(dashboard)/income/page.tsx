@@ -5,6 +5,8 @@ import {
 } from "@/actions/booth-sales";
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { formatGroupedNumber } from "@/lib/number-format";
+import { formatJakartaDate, formatJakartaDateTime } from "@/lib/date-format";
 import { redirect } from "next/navigation";
 import { PlusCircle, Wallet, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -120,14 +122,14 @@ export default async function IncomePage({
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                                            Rp {inc.amount.toLocaleString("id-ID")}
+                                            Rp {formatGroupedNumber(inc.amount)}
                                         </td>
                                         <td className="px-6 py-4">
                                             {inc.isRecurring ? "Recurring" : "One-time"}
                                         </td>
                                         <td className="px-6 py-4 flex items-center gap-2">
                                             <Calendar className="w-4 h-4 text-slate-400" />
-                                            {inc.isRecurring ? `Every ${inc.payoutDate}th` : inc.expectedDate?.toLocaleDateString() ?? "N/A"}
+                                            {inc.isRecurring ? `Every ${inc.payoutDate}th` : inc.expectedDate ? formatJakartaDate(inc.expectedDate) : "N/A"}
                                         </td>
                                         <td className="px-6 py-4">
                                             {inc.isActive ? (
@@ -214,7 +216,7 @@ export default async function IncomePage({
                         {workspace.portfolio.slice(0, 5).map((item) => (
                             <div key={item.boothId} className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm">
                                 <p className="font-semibold">{item.boothName}</p>
-                                <p>Expected Income: Rp {item.expectedMonthlyIncome.toLocaleString("id-ID")}</p>
+                                <p>Expected Income: Rp {formatGroupedNumber(item.expectedMonthlyIncome)}</p>
                                 <p>Share: {item.revenueSharePct.toFixed(2)}%</p>
                                 <p>Type: {item.isShared ? "Shared" : "Owned"}</p>
                             </div>
@@ -252,10 +254,10 @@ export default async function IncomePage({
                                     <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td className="px-6 py-4">{`${item.month}/${item.year}`}</td>
                                         <td className="px-6 py-4 font-medium">{item.booth.name}</td>
-                                        <td className="px-6 py-4 text-emerald-600">Rp {item.grossIncome.toLocaleString("id-ID")}</td>
-                                        <td className="px-6 py-4">{item.netIncome ? `Rp ${item.netIncome.toLocaleString("id-ID")}` : "-"}</td>
+                                        <td className="px-6 py-4 text-emerald-600">Rp {formatGroupedNumber(item.grossIncome)}</td>
+                                        <td className="px-6 py-4">{item.netIncome ? `Rp ${formatGroupedNumber(item.netIncome)}` : "-"}</td>
                                         <td className="px-6 py-4">{item.uploadedBy.displayName}</td>
-                                        <td className="px-6 py-4">{item.uploadedAt.toLocaleString("id-ID")}</td>
+                                        <td className="px-6 py-4">{formatJakartaDateTime(item.uploadedAt)}</td>
                                     </tr>
                                 ))
                             )}

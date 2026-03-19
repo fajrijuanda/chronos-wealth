@@ -1,5 +1,6 @@
 import { ensureAppUserByEmail, getAppUserByEmail } from "@/actions/collaboration";
 import { getSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
+import { formatGroupedNumber } from "@/lib/number-format";
 import { redirect } from "next/navigation";
 
 export default async function RegisterPage({
@@ -20,7 +21,8 @@ export default async function RegisterPage({
 
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const displayName = String(formData.get("displayName") ?? "").trim();
-    const boothBasePrice = Number(formData.get("boothBasePrice") ?? 0);
+    const boothBasePriceRaw = String(formData.get("boothBasePrice") ?? "").trim();
+    const boothBasePrice = Number(boothBasePriceRaw.replaceAll(",", ""));
 
     if (!email || !email.includes("@")) {
       redirect("/register?error=Please%20enter%20a%20valid%20email");
@@ -103,9 +105,10 @@ export default async function RegisterPage({
             <input
               id="register-booth-price"
               name="boothBasePrice"
-              type="number"
-              min={1}
-              defaultValue={7_500_000}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9,]*"
+              defaultValue={formatGroupedNumber(7_500_000)}
               required
               className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
             />

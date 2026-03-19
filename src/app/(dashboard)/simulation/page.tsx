@@ -2,6 +2,8 @@ import { simulateCollaborativeGrowth } from "@/actions/simulation";
 import { Calculator, Users, TrendingUp, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CsvActions } from "@/components/simulation/CsvActions";
+import { formatGroupedNumber } from "@/lib/number-format";
+import { formatJakartaDate } from "@/lib/date-format";
 
 type EventFilter =
   | "all"
@@ -52,7 +54,7 @@ function formatContractEvent(event: {
   label: string;
   type: EventFilter;
 }) {
-  return `H${event.day}: ${event.label}${event.amount !== 0 ? ` (Rp ${event.amount.toLocaleString("id-ID")})` : ""}`;
+  return `H${event.day}: ${event.label}${event.amount !== 0 ? ` (Rp ${formatGroupedNumber(event.amount)})` : ""}`;
 }
 
 function getEventSummary(
@@ -375,9 +377,9 @@ export default async function SimulationPage({
 
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-2xl bg-linear-to-br from-blue-600 to-indigo-700 p-8 shadow-lg text-white">
-            <h3 className="text-blue-100 font-medium mb-2">Combined Projected Income on {targetDate.toLocaleDateString("id-ID")}</h3>
+            <h3 className="text-blue-100 font-medium mb-2">Combined Projected Income on {formatJakartaDate(targetDate)}</h3>
             <p className="text-5xl font-bold tracking-tight">
-              Rp {Math.max(0, simulation.combined.totalProjectedIncome).toLocaleString("id-ID")}
+              Rp {formatGroupedNumber(Math.max(0, simulation.combined.totalProjectedIncome))}
             </p>
             <div className="mt-8 pt-6 border-t border-blue-400/30 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-100">
               <div className="flex items-center gap-2">
@@ -390,7 +392,7 @@ export default async function SimulationPage({
               </div>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-cyan-200" />
-                Total PT2 Urunan: Rp {combinedPt2Fund.toLocaleString("id-ID")} / Rp {combinedPt2Target.toLocaleString("id-ID")}
+                Total PT2 Urunan: Rp {formatGroupedNumber(combinedPt2Fund)} / Rp {formatGroupedNumber(combinedPt2Target)}
               </div>
             </div>
           </div>
@@ -402,16 +404,16 @@ export default async function SimulationPage({
                 <p className="text-xs text-slate-500 mb-4">{user.email}</p>
 
                 <div className="space-y-2 text-sm">
-                  <p>Harga Booth: Rp {user.boothPrice.toLocaleString("id-ID")}</p>
-                  <p>Budget Bulanan Simulasi: Rp {user.monthlyExpense.toLocaleString("id-ID")}</p>
+                  <p>Harga Booth: Rp {formatGroupedNumber(user.boothPrice)}</p>
+                  <p>Budget Bulanan Simulasi: Rp {formatGroupedNumber(user.monthlyExpense)}</p>
                   <p>Timing Beli: {user.purchaseTiming === "START_OF_MONTH" ? "Awal Bulan" : "Akhir Bulan"}</p>
-                  <p>Idle Cash Target: Rp {user.idleCashTarget.toLocaleString("id-ID")}</p>
-                  <p>Holding Fund: Rp {user.holdingFundAccumulated.toLocaleString("id-ID")} / Rp {user.personalHoldingTarget.toLocaleString("id-ID")}</p>
-                  <p>Holding Launch: {new Date(user.holdingLaunchDate).toLocaleDateString("id-ID")}</p>
-                  <p>PT 2 Urunan Fund: Rp {user.pt2FundAccumulated.toLocaleString("id-ID")} / Rp {user.personalPt2Target.toLocaleString("id-ID")}</p>
-                  <p>PT 2 Target Date: {new Date(user.pt2LaunchDate).toLocaleDateString("id-ID")}</p>
+                  <p>Idle Cash Target: Rp {formatGroupedNumber(user.idleCashTarget)}</p>
+                  <p>Holding Fund: Rp {formatGroupedNumber(user.holdingFundAccumulated)} / Rp {formatGroupedNumber(user.personalHoldingTarget)}</p>
+                  <p>Holding Launch: {formatJakartaDate(user.holdingLaunchDate)}</p>
+                  <p>PT 2 Urunan Fund: Rp {formatGroupedNumber(user.pt2FundAccumulated)} / Rp {formatGroupedNumber(user.personalPt2Target)}</p>
+                  <p>PT 2 Target Date: {formatJakartaDate(user.pt2LaunchDate)}</p>
                   <p>Booth Equivalent Saat Ini: {user.boothEquivalentOwned.toFixed(2)}</p>
-                  <p>Projected Monthly Income: Rp {user.projectedMonthlyIncome.toLocaleString("id-ID")}</p>
+                  <p>Projected Monthly Income: Rp {formatGroupedNumber(user.projectedMonthlyIncome)}</p>
                   <p>Target Booth Equivalent: {user.targetBoothEquivalent}</p>
                 </div>
               </div>
@@ -512,10 +514,10 @@ export default async function SimulationPage({
                         <td className="px-3 py-2">{plan.month}</td>
                         <td className="px-3 py-2">{plan.purchaseDay}</td>
                         <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
-                        <td className="px-3 py-2">Rp {plan.monthlyBoothIncome.toLocaleString("id-ID")}</td>
-                        <td className="px-3 py-2">Rp {plan.monthlyCommissionIncome.toLocaleString("id-ID")}</td>
-                        <td className="px-3 py-2">Rp {plan.monthlyHoldingSaved.toLocaleString("id-ID")}</td>
-                        <td className="px-3 py-2">Rp {plan.monthlyPt2Saved.toLocaleString("id-ID")}</td>
+                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</td>
+                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
+                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyHoldingSaved)}</td>
+                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyPt2Saved)}</td>
                         <td className="px-3 py-2 text-xs">
                           {filteredEvents.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
@@ -534,7 +536,7 @@ export default async function SimulationPage({
                           )}
                         </td>
                         <td className="px-3 py-2">{plan.totalBoothsEquivalent.toFixed(2)}</td>
-                        <td className="px-3 py-2">Rp {plan.monthEndCash.toLocaleString("id-ID")}</td>
+                        <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthEndCash)}</td>
                       </tr>
                     )})}
                   </tbody>

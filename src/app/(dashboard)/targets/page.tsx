@@ -1,5 +1,7 @@
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { formatGroupedNumber } from "@/lib/number-format";
+import { formatJakartaDate } from "@/lib/date-format";
 import { getSavingGoals } from "@/actions/saving";
 import { PlusCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,16 +38,16 @@ export default async function TargetsPage({
                     Booth Equivalent Target
                 </h2>
                 <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-4">
-                    Target: {workspace.targetProgress.targetBoothEquivalent} booth x Rp {workspace.targetProgress.revenuePerBooth.toLocaleString("id-ID")}
+                    Target: {workspace.targetProgress.targetBoothEquivalent} booth x Rp {formatGroupedNumber(workspace.targetProgress.revenuePerBooth)}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                     <div className="rounded-xl bg-white/80 dark:bg-black/30 p-3">
                         <p className="text-slate-500">Target Income</p>
-                        <p className="font-semibold">Rp {workspace.targetProgress.targetIncome.toLocaleString("id-ID")}</p>
+                        <p className="font-semibold">Rp {formatGroupedNumber(workspace.targetProgress.targetIncome)}</p>
                     </div>
                     <div className="rounded-xl bg-white/80 dark:bg-black/30 p-3">
                         <p className="text-slate-500">Current Share Income</p>
-                        <p className="font-semibold">Rp {workspace.targetProgress.monthlyIncomeShare.toLocaleString("id-ID")}</p>
+                        <p className="font-semibold">Rp {formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}</p>
                     </div>
                     <div className="rounded-xl bg-white/80 dark:bg-black/30 p-3">
                         <p className="text-slate-500">Booth Equivalent Achieved</p>
@@ -71,7 +73,7 @@ export default async function TargetsPage({
                                 </div>
                                 <h2 className="font-semibold text-xl line-clamp-1">{goal.name}</h2>
                                 <div className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                                    Rp {goal.currentAmount.toLocaleString("id-ID")} / Rp {goal.targetAmount.toLocaleString("id-ID")}
+                                    Rp {formatGroupedNumber(goal.currentAmount)} / Rp {formatGroupedNumber(goal.targetAmount)}
                                 </div>
                             </div>
 
@@ -82,7 +84,7 @@ export default async function TargetsPage({
                                 </div>
                                 <Progress value={progress} className="h-3 [&>div]:bg-linear-to-r [&>div]:from-purple-500 [&>div]:to-indigo-500" />
                                 <p className="text-xs text-slate-400 mt-2 text-right">
-                                    Deadline: {new Date(goal.deadline).toLocaleDateString()}
+                                    Deadline: {formatJakartaDate(goal.deadline)}
                                 </p>
                             </div>
                         </div>

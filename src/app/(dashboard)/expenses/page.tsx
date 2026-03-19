@@ -2,6 +2,7 @@ import { getCategoryExpenseWarning } from "@/actions/budget";
 import { AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { formatGroupedNumber } from "@/lib/number-format";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function ExpensesPage() {
                                     <div>
                                         <h2 className="font-semibold text-lg">{cat.name}</h2>
                                         <p className="text-sm text-slate-500">
-                                            Rp {cat.data.expenseValue.toLocaleString("id-ID")} / Rp {cat.data.budgetLimit.toLocaleString("id-ID")}
+                                            Rp {formatGroupedNumber(cat.data.expenseValue)} / Rp {formatGroupedNumber(cat.data.budgetLimit)}
                                         </p>
                                     </div>
                                 </div>

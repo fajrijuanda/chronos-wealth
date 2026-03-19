@@ -1,6 +1,7 @@
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getDashboardMetrics } from "@/actions/transaction";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { formatGroupedNumber } from "@/lib/number-format";
 import { Wallet, TrendingDown, Target } from "lucide-react";
 
 export default async function OverviewPage({
@@ -35,7 +36,7 @@ export default async function OverviewPage({
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Total Balance</h2>
                     </div>
                     <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        Rp {metrics.totalBalance.toLocaleString("id-ID")}
+                        Rp {formatGroupedNumber(metrics.totalBalance)}
                     </p>
                 </div>
 
@@ -48,7 +49,7 @@ export default async function OverviewPage({
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Mo. Income</h2>
                     </div>
                     <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        Rp {metrics.monthlyIncome.toLocaleString("id-ID")}
+                        Rp {formatGroupedNumber(metrics.monthlyIncome)}
                     </p>
                 </div>
 
@@ -61,10 +62,10 @@ export default async function OverviewPage({
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Active Targets</h2>
                     </div>
                     <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        {workspace.targetProgress.targetBoothEquivalent.toLocaleString("id-ID")} Booth Eq.
+                        {formatGroupedNumber(workspace.targetProgress.targetBoothEquivalent)} Booth Eq.
                     </p>
                     <p className="text-sm text-slate-500">
-                        Monthly share: Rp {workspace.targetProgress.monthlyIncomeShare.toLocaleString("id-ID")}
+                        Monthly share: Rp {formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}
                     </p>
                 </div>
             </div>
