@@ -12,17 +12,35 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useStatus } from "@/components/providers/StatusProvider";
-import { createJointBoothProposalByEmail } from "@/actions/collaboration";
-import { BoothPackageType, BoothSelectionType } from "@prisma/client";
+import {
+  createJointBoothProposalByEmail,
+  createNonBoothAssetByEmail,
+} from "@/actions/collaboration";
+import { AssetType, BoothPackageType, BoothSelectionType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
 export function AddAssetButton({ email, basePrice }: { email: string, basePrice: number }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [assetTypeValue, setAssetTypeValue] = useState<"BOOTH" | AssetType>("BOOTH");
   const [packageTypeValue, setPackageTypeValue] = useState<"ECONOMY" | "EXCLUSIVE">("ECONOMY");
   const [mouDateValue, setMouDateValue] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const isBoothAsset = assetTypeValue === "BOOTH";
+
+  const nonBoothNameLabel = useMemo(() => {
+    if (assetTypeValue === "GOLD") return "Nama Emas";
+    if (assetTypeValue === "PROPERTY") return "Nama Properti";
+    return "Nama Asset";
+  }, [assetTypeValue]);
+
+  const nonBoothNamePlaceholder = useMemo(() => {
+    if (assetTypeValue === "GOLD") return "Emas Batangan Antam";
+    if (assetTypeValue === "PROPERTY") return "Rumah Bandung Timur";
+    return "Mobil, tanah, koleksi, dll.";
+  }, [assetTypeValue]);
 
   const payoutDatePreview = useMemo(() => {
     const parsed = new Date(`${mouDateValue}T00:00:00`);
@@ -48,6 +66,11 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
   }
 
   async function handleSubmit(formData: FormData) {
+    const assetTypeRaw = String(formData.get("assetType") ?? "BOOTH").toUpperCase();
+    const selectedAssetType: "BOOTH" | AssetType =
+      assetTypeRaw === "GOLD" || assetTypeRaw === "PROPERTY" || assetTypeRaw === "OTHER"
+        ? (assetTypeRaw as AssetType)
+        : "BOOTH";
     const name = String(formData.get("name") ?? "");
     const price = Number(formData.get("price") ?? 0);
     const income = Number(formData.get("income") ?? 0);
@@ -60,7 +83,7 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
     let mouDocumentMimeType: string | undefined;
     let mouDocumentBase64: string | undefined;
 
-    if (mouFile instanceof File && mouFile.size > 0) {
+    if (selectedAssetType === "BOOTH" && mouFile instanceof File && mouFile.size > 0) {
       if (mouFile.type !== "application/pdf") {
         showError("File MoU harus berformat PDF.");
         return;
@@ -76,24 +99,45 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
       mouDocumentBase64 = arrayBufferToBase64(await mouFile.arrayBuffer());
     }
 
+    const estimatedValue = Number(formData.get("estimatedValue") ?? 0);
+    const quantityRaw = String(formData.get("quantity") ?? "").trim();
+    const quantity = quantityRaw ? Number(quantityRaw) : null;
+    const notes = String(formData.get("notes") ?? "").trim();
+    const acquiredAtRaw = String(formData.get("acquiredAt") ?? "").trim();
+    const acquiredAt = acquiredAtRaw ? new Date(`${acquiredAtRaw}T00:00:00`) : null;
+
     startTransition(async () => {
         showLoading("Menambahkan asset ke portofolio...");
         try {
-            await createJointBoothProposalByEmail({
-                requesterEmail: email,
-                partnerEmail: email, // Self purchase
-                boothName: name,
-                boothPrice: price,
-                requesterAvailableBalance: price, // Assume balance enough for direct add
-                partnerBoothPrice: 0,
-                expectedMonthlyIncome: income,
-                packageType,
-                mouSignedAt,
-                mouDocumentName,
-                mouDocumentMimeType,
-                mouDocumentBase64,
-                selectedBoothType: BoothSelectionType.NEW_BOOTH,
-            });
+            if (selectedAssetType === "BOOTH") {
+              await createJointBoothProposalByEmail({
+                  requesterEmail: email,
+                  partnerEmail: email,
+                  boothName: name,
+                  boothPrice: price,
+                  requesterAvailableBalance: price,
+                  partnerBoothPrice: 0,
+                  expectedMonthlyIncome: income,
+                  packageType,
+                  mouSignedAt,
+                  mouDocumentName,
+                  mouDocumentMimeType,
+                  mouDocumentBase64,
+                  selectedBoothType: BoothSelectionType.NEW_BOOTH,
+              });
+            } else {
+              await createNonBoothAssetByEmail({
+                ownerEmail: email,
+                type: selectedAssetType,
+                name,
+                estimatedValue,
+                quantity,
+                unit: selectedAssetType === "GOLD" ? "gram" : null,
+                notes: notes || null,
+                acquiredAt,
+              });
+            }
+
             showSuccess("Asset baru berhasil ditambahkan ke portofolio.");
             setIsOpen(false);
             router.refresh();
@@ -124,88 +168,170 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
           </DialogHeader>
           <form action={handleSubmit} className="space-y-4 py-4">
             <div className="space-y-2">
-              <label htmlFor="asset-name" className="text-sm font-medium">Nama Booth</label>
+              <label htmlFor="asset-type" className="text-sm font-medium">Jenis Asset</label>
+              <select
+                id="asset-type"
+                name="assetType"
+                value={assetTypeValue}
+                onChange={(event) => {
+                  const next = event.target.value.toUpperCase();
+                  if (next === "GOLD" || next === "PROPERTY" || next === "OTHER") {
+                    setAssetTypeValue(next);
+                    return;
+                  }
+                  setAssetTypeValue("BOOTH");
+                }}
+                className="w-full px-4 py-2"
+              >
+                <option value="BOOTH">Booth</option>
+                <option value="GOLD">Emas</option>
+                <option value="PROPERTY">Rumah / Properti</option>
+                <option value="OTHER">Asset Lainnya</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="asset-name" className="text-sm font-medium">
+                {isBoothAsset ? "Nama Booth" : nonBoothNameLabel}
+              </label>
               <input
                 id="asset-name"
                 name="name"
                 required
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                placeholder="Booth Ekonomi 01"
+                placeholder={isBoothAsset ? "Booth Ekonomi 01" : nonBoothNamePlaceholder}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="asset-price" className="text-sm font-medium">Harga Beli (Rp)</label>
-                <input
-                  id="asset-price"
-                  name="price"
-                  type="number"
-                  required
-                  defaultValue={basePrice}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="asset-income" className="text-sm font-medium">Income Bulanan (Rp)</label>
-                <input
-                  id="asset-income"
-                  name="income"
-                  type="number"
-                  required
-                  defaultValue={1000000}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="asset-package-type" className="text-sm font-medium">Tipe Paket</label>
-              <select
-                id="asset-package-type"
-                name="packageType"
-                value={packageTypeValue}
-                onChange={(event) => setPackageTypeValue(event.target.value === "EXCLUSIVE" ? "EXCLUSIVE" : "ECONOMY")}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-              >
-                <option value="ECONOMY">Ekonomi</option>
-                <option value="EXCLUSIVE">Eksklusif</option>
-              </select>
-            </div>
 
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="asset-mou-signed-at" className="text-sm font-medium">Tanggal TTD MoU</label>
-                <input
-                  id="asset-mou-signed-at"
-                  name="mouSignedAt"
-                  type="date"
-                  required
-                  value={mouDateValue}
-                  onChange={(event) => setMouDateValue(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                />
-              </div>
+            {isBoothAsset ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="asset-price" className="text-sm font-medium">Harga Beli (Rp)</label>
+                    <input
+                      id="asset-price"
+                      name="price"
+                      type="number"
+                      required
+                      defaultValue={basePrice}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="asset-income" className="text-sm font-medium">Income Bulanan (Rp)</label>
+                    <input
+                      id="asset-income"
+                      name="income"
+                      type="number"
+                      required
+                      defaultValue={1000000}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="asset-package-type" className="text-sm font-medium">Tipe Paket</label>
+                  <select
+                    id="asset-package-type"
+                    name="packageType"
+                    value={packageTypeValue}
+                    onChange={(event) => setPackageTypeValue(event.target.value === "EXCLUSIVE" ? "EXCLUSIVE" : "ECONOMY")}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                  >
+                    <option value="ECONOMY">Ekonomi</option>
+                    <option value="EXCLUSIVE">Eksklusif</option>
+                  </select>
+                </div>
 
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
-                <p>
-                  Jadwal cair otomatis: <span className="font-semibold">tanggal {payoutDatePreview}</span> setiap bulan.
-                </p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Paket Ekonomi = H+1 dari TTD MoU, Paket Eksklusif = tanggal yang sama dengan TTD MoU.
-                </p>
-              </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="asset-mou-signed-at" className="text-sm font-medium">Tanggal TTD MoU</label>
+                    <input
+                      id="asset-mou-signed-at"
+                      name="mouSignedAt"
+                      type="date"
+                      required
+                      value={mouDateValue}
+                      onChange={(event) => setMouDateValue(event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <label htmlFor="asset-mou-file" className="text-sm font-medium">Upload PDF MoU (Opsional)</label>
-                <input
-                  id="asset-mou-file"
-                  name="mouFile"
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium dark:file:bg-slate-800"
-                />
-                <p className="text-xs text-slate-500 dark:text-slate-400">Maksimal 5 MB.</p>
-              </div>
-            </div>
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                    <p>
+                      Jadwal cair otomatis: <span className="font-semibold">tanggal {payoutDatePreview}</span> setiap bulan.
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Paket Ekonomi = H+1 dari TTD MoU, Paket Eksklusif = tanggal yang sama dengan TTD MoU.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="asset-mou-file" className="text-sm font-medium">Upload PDF MoU (Opsional)</label>
+                    <input
+                      id="asset-mou-file"
+                      name="mouFile"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium dark:file:bg-slate-800"
+                    />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Maksimal 5 MB.</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="asset-estimated-value" className="text-sm font-medium">Estimasi Nilai Saat Ini (Rp)</label>
+                    <input
+                      id="asset-estimated-value"
+                      name="estimatedValue"
+                      type="number"
+                      min={0}
+                      required
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                      placeholder="250000000"
+                    />
+                  </div>
+                  {assetTypeValue === "GOLD" ? (
+                    <div className="space-y-2">
+                      <label htmlFor="asset-quantity" className="text-sm font-medium">Berat (gram)</label>
+                      <input
+                        id="asset-quantity"
+                        name="quantity"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                        placeholder="100"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="asset-acquired-at" className="text-sm font-medium">Tanggal Perolehan (Opsional)</label>
+                  <input
+                    id="asset-acquired-at"
+                    name="acquiredAt"
+                    type="date"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="asset-notes" className="text-sm font-medium">Catatan (Opsional)</label>
+                  <textarea
+                    id="asset-notes"
+                    name="notes"
+                    rows={3}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                    placeholder="Contoh: bukan aset penghasil income rutin"
+                  />
+                </div>
+              </>
+            )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel

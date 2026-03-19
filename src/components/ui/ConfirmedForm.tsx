@@ -41,7 +41,7 @@ export function ConfirmedForm({
             await action(formData);
             showSuccess(successMessage);
             router.refresh();
-          } catch (error: any) {
+          } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : "Something went wrong";
             // If it's a NEXT_REDIRECT error, it means it's actually success but Next.js redirecting
             if (msg.includes("NEXT_REDIRECT")) {
@@ -60,10 +60,15 @@ export function ConfirmedForm({
     <form action={handleSubmit} className={className}>
       {/* Inject isPending into children if they are buttons */}
       {React.Children.map(children, (child) => {
-        if (React.isValidElement(child) && (child.type === "button" || (child.props as any)?.type === "submit")) {
-          return React.cloneElement(child as React.ReactElement<any>, {
-            disabled: isPending || (child.props as any).disabled,
-          });
+        if (React.isValidElement(child)) {
+          const childProps = child.props as { type?: string; disabled?: boolean } | null;
+          const isSubmitButton = child.type === "button" || childProps?.type === "submit";
+
+          if (isSubmitButton) {
+            return React.cloneElement(child as React.ReactElement<{ disabled?: boolean }>, {
+              disabled: isPending || Boolean(childProps?.disabled),
+            });
+          }
         }
         return child;
       })}

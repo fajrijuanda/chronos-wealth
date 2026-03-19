@@ -1,8 +1,11 @@
 import { Bell, LogOut, Search, User, Settings } from "lucide-react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getSessionUserEmail } from "@/lib/auth-session";
 import { MobileNav } from "./MobileNav";
+import { ThemeToggle } from "./ThemeToggle";
+import { NavbarSessionInfo } from "./NavbarSessionInfo";
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -19,7 +22,7 @@ export async function Navbar() {
     const sessionInitial = (sessionEmail?.trim().charAt(0) || "U").toUpperCase();
 
     return (
-        <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between px-4 md:px-6 backdrop-blur-md bg-white/60 dark:bg-black/60 border-b border-white/20 shadow-sm">
+        <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between px-4 md:px-6 backdrop-blur-md bg-background/75 border-b border-border shadow-sm">
             <div className="flex items-center gap-4 flex-1">
                 <MobileNav sessionEmail={sessionEmail ?? undefined} />
                 <div className="relative w-full max-w-md hidden md:block">
@@ -27,21 +30,23 @@ export async function Navbar() {
                     <Input
                         type="search"
                         placeholder="Search transactions or goals..."
-                        className="w-full rounded-2xl bg-white/50 dark:bg-black/50 pl-10 border-white/20 focus-visible:ring-blue-500"
+                        className="w-full rounded-2xl bg-card/70 pl-10 border-border focus-visible:ring-blue-500"
                     />
                 </div>
             </div>
             <div className="flex items-center gap-4">
-                <div className="hidden md:flex flex-col items-end leading-tight">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Logged in as</span>
-                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200 max-w-44 truncate">
-                        {sessionEmail ?? "-"}
-                    </span>
-                </div>
-                
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50">
-                    <Bell className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                <ThemeToggle />
+
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                >
+                    <Bell className="h-5 w-5 text-muted-foreground" />
                 </Button>
+
+                <NavbarSessionInfo sessionEmail={sessionEmail} />
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -57,9 +62,11 @@ export async function Navbar() {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-xl cursor-pointer">
-                            <Settings className="mr-2 h-4 w-4" />
-                            <span>Settings</span>
+                        <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                            <Link href="/profile" className="flex items-center">
+                                <Settings className="mr-2 h-4 w-4" />
+                                <span>Settings</span>
+                            </Link>
                         </DropdownMenuItem>
                         <form action={logoutAction} className="w-full">
                             <DropdownMenuItem asChild className="rounded-xl cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/30">

@@ -665,3 +665,30 @@ export async function simulateCollaborativeGrowth(input: {
     },
   };
 }
+
+export async function simulateSingleUserGrowth(input: {
+  targetDate: Date;
+  email: string;
+}) {
+  const primary = await simulateUserBoothPlan({
+    targetDate: input.targetDate,
+    simUser: {
+      email: input.email,
+      fallbackBoothPrice: 7_500_000,
+      fallbackExpenseMin: 1_000_000,
+      fallbackExpenseMax: 1_000_000,
+      fallbackOpeningBalance: 0,
+      fallbackPurchaseTiming: BoothPurchaseTiming.START_OF_MONTH,
+      revenuePerBooth: 1_000_000,
+    },
+  });
+
+  return {
+    targetDate: input.targetDate,
+    primary,
+    combined: {
+      totalProjectedIncome: primary.projectedMonthlyIncome,
+      totalBoothEquivalent: primary.boothEquivalentOwned,
+    },
+  };
+}

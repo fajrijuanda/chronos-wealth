@@ -2,6 +2,7 @@
 
 import {
   AppUser,
+  AssetType,
   BoothPackageType,
   BoothPurchaseTiming,
   BoothSelectionType,
@@ -43,7 +44,10 @@ function computeBoothRecurringPayoutDay(mouSignedAt: Date, packageType: BoothPac
 }
 
 function decodeBase64ToBytes(base64: string): Uint8Array {
-  return Uint8Array.from(Buffer.from(base64, "base64"));
+  const source = Buffer.from(base64, "base64");
+  const bytes: Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(source.length));
+  bytes.set(source);
+  return bytes;
 }
 
 function formatDisplayNameFromEmail(email: string) {
@@ -85,6 +89,97 @@ export async function getAppUserByEmail(email: string) {
   return prisma.appUser.findUnique({
     where: { email: email.trim().toLowerCase() },
   });
+}
+
+export async function updateUserProfileByEmail(input: {
+  email: string;
+  displayName: string;
+  profilePhotoUrl?: string | null;
+  bio?: string | null;
+}) {
+  const user = await requireUserByEmail(input.email);
+  const displayName = input.displayName.trim();
+
+  if (!displayName) {
+    throw new Error("Display name is required");
+  }
+
+  const result = await prisma.appUser.update({
+    where: { id: user.id },
+    data: {
+      displayName,
+      profilePhotoUrl: input.profilePhotoUrl?.trim() || null,
+      bio: input.bio?.trim() || null,
+    },
+  });
+
+  revalidatePath("/profile");
+  revalidatePath("/collaboration");
+  revalidatePath("/simulation");
+
+  return result;
+}
+
+export async function getUserConnectionDirectoryByEmail(email: string) {
+  const currentUser = await ensureAppUserByEmail({ email });
+
+  const [users, friendships] = await Promise.all([
+    prisma.appUser.findMany({
+      where: { id: { not: currentUser.id } },
+      orderBy: { displayName: "asc" },
+    }),
+    prisma.friendship.findMany({
+      where: {
+        OR: [
+          { requesterId: currentUser.id },
+          { addresseeId: currentUser.id },
+        ],
+      },
+    }),
+  ]);
+
+  const friendshipByUserId = new Map<string, (typeof friendships)[number]>();
+
+  for (const friendship of friendships) {
+    const otherUserId =
+      friendship.requesterId === currentUser.id
+        ? friendship.addresseeId
+        : friendship.requesterId;
+    friendshipByUserId.set(otherUserId, friendship);
+  }
+
+  const directory = users.map((user) => {
+    const friendship = friendshipByUserId.get(user.id);
+
+    if (!friendship) {
+      return {
+        user,
+        relationship: "NONE" as const,
+        friendshipId: null,
+      };
+    }
+
+    const isOutgoing = friendship.requesterId === currentUser.id;
+
+    if (friendship.status === FriendshipStatus.PENDING) {
+      return {
+        user,
+        relationship: isOutgoing ? ("PENDING_OUT" as const) : ("PENDING_IN" as const),
+        friendshipId: friendship.id,
+      };
+    }
+
+    return {
+      user,
+      relationship: friendship.status,
+      friendshipId: friendship.id,
+    };
+  });
+
+  return {
+    currentUser,
+    directory,
+  };
 }
 
 export async function setManualBasePrice(email: string, price: number) {
@@ -237,8 +332,8 @@ export async function decideBoothPurchaseStrategy(input: {
 
       const mouDocumentName = input.mouDocumentName?.trim();
       const mouDocumentMimeType = input.mouDocumentMimeType?.trim();
-      const mouDocumentData = input.mouDocumentBase64
-        ? decodeBase64ToBytes(input.mouDocumentBase64)
+      const mouDocumentData: Uint8Array<ArrayBuffer> | null = input.mouDocumentBase64
+        ? (decodeBase64ToBytes(input.mouDocumentBase64) as Uint8Array<ArrayBuffer>)
         : null;
 
       const createdBooth = await tx.booth.create({
@@ -550,6 +645,49 @@ export async function getUserBoothPortfolio(userId: string) {
   }));
 }
 
+export async function createNonBoothAsset(input: {
+  ownerUserId: string;
+  type: AssetType;
+  name: string;
+  estimatedValue: number;
+  quantity?: number | null;
+  unit?: string | null;
+  notes?: string | null;
+  acquiredAt?: Date | null;
+}) {
+  if (!input.name.trim()) {
+    throw new Error("Asset name is required");
+  }
+
+  if (!Number.isFinite(input.estimatedValue) || input.estimatedValue < 0) {
+    throw new Error("estimatedValue must be zero or positive");
+  }
+
+  if (
+    input.quantity !== undefined &&
+    input.quantity !== null &&
+    (!Number.isFinite(input.quantity) || input.quantity < 0)
+  ) {
+    throw new Error("quantity must be zero or positive");
+  }
+
+  const result = await prisma.userAsset.create({
+    data: {
+      ownerUserId: input.ownerUserId,
+      type: input.type,
+      name: input.name.trim(),
+      estimatedValue: input.estimatedValue,
+      quantity: input.quantity ?? null,
+      unit: input.unit?.trim() || null,
+      notes: input.notes?.trim() || null,
+      acquiredAt: input.acquiredAt ?? null,
+    },
+  });
+
+  revalidatePath("/assets");
+  return result;
+}
+
 export async function setSimulationBaseBoothByEmail(input: {
   email: string;
   boothId: string;
@@ -695,7 +833,15 @@ export async function upsertUserFinanceProfile(data: {
 export async function getCollaborationWorkspace(email: string) {
   const currentUser = await ensureAppUserByEmail({ email });
 
-  const [friendships, incomingProposals, outgoingProposals, portfolio, targetProgress, financeProfile] =
+  const [
+    friendships,
+    incomingProposals,
+    outgoingProposals,
+    portfolio,
+    nonBoothAssets,
+    targetProgress,
+    financeProfile,
+  ] =
     await Promise.all([
       prisma.friendship.findMany({
         where: {
@@ -729,6 +875,10 @@ export async function getCollaborationWorkspace(email: string) {
         orderBy: { proposedAt: "desc" },
       }),
       getUserBoothPortfolio(currentUser.id),
+      prisma.userAsset.findMany({
+        where: { ownerUserId: currentUser.id },
+        orderBy: { createdAt: "desc" },
+      }),
       getUserBoothTargetProgress(currentUser.id),
       prisma.userFinanceProfile.findUnique({ where: { userId: currentUser.id } }),
     ]);
@@ -756,6 +906,7 @@ export async function getCollaborationWorkspace(email: string) {
     incomingProposals,
     outgoingProposals,
     portfolio,
+    nonBoothAssets,
     targetProgress,
     financeProfile,
   };
@@ -814,6 +965,29 @@ export async function createJointBoothProposalByEmail(input: {
     referralEconomyBooths: input.referralEconomyBooths,
     selectedBoothType: input.selectedBoothType,
     notes: input.notes,
+  });
+}
+
+export async function createNonBoothAssetByEmail(input: {
+  ownerEmail: string;
+  type: AssetType;
+  name: string;
+  estimatedValue: number;
+  quantity?: number | null;
+  unit?: string | null;
+  notes?: string | null;
+  acquiredAt?: Date | null;
+}) {
+  const owner = await ensureAppUserByEmail({ email: input.ownerEmail });
+  return createNonBoothAsset({
+    ownerUserId: owner.id,
+    type: input.type,
+    name: input.name,
+    estimatedValue: input.estimatedValue,
+    quantity: input.quantity,
+    unit: input.unit,
+    notes: input.notes,
+    acquiredAt: input.acquiredAt,
   });
 }
 

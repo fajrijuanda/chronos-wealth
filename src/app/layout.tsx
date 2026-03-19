@@ -25,7 +25,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  const savedTheme = localStorage.getItem("chronos-theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const nextIsDark = savedTheme ? savedTheme === "dark" : prefersDark;
+  document.documentElement.classList.toggle("dark", nextIsDark);
+})();`,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

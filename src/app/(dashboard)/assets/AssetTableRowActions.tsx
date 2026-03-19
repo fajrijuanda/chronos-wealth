@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Trash2, MoreHorizontal, Target } from "lucide-react";
+import { Trash2, MoreHorizontal } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -10,26 +10,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useStatus } from "@/components/providers/StatusProvider";
-import { deleteBoothOwnership, setSimulationBaseBoothByEmail } from "@/actions/collaboration";
+import { deleteBoothOwnership } from "@/actions/collaboration";
 import { useRouter } from "next/navigation";
-import { BoothPackageType } from "@prisma/client";
 import { EditAssetDialog } from "./EditAssetDialog";
 
 export function AssetTableRowActions({ 
-    email, 
     ownershipId, 
-    boothId, 
+  boothId, 
     boothName, 
-    packageType,
     expectedMonthlyIncome,
     capitalAmount,
     revenueSharePct 
 }: { 
-    email: string, 
     ownershipId: string, 
-    boothId: string, 
+  boothId: string,
     boothName: string,
-    packageType: BoothPackageType,
     expectedMonthlyIncome: number,
     capitalAmount: number,
     revenueSharePct: number
@@ -68,20 +63,6 @@ export function AssetTableRowActions({
     });
   };
 
-  const handleSetBase = () => {
-    startTransition(async () => {
-      showLoading("Mengatur harga dasar...");
-      try {
-        await setSimulationBaseBoothByEmail({ email, boothId });
-        showSuccess(`"${boothName}" sekarang menjadi acuan harga dasar.`);
-        router.refresh();
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal mengatur harga dasar.";
-        showError(message);
-      }
-    });
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -91,12 +72,6 @@ export function AssetTableRowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
         <EditAssetDialog asset={asset} />
-        {packageType !== BoothPackageType.EXCLUSIVE && (
-            <DropdownMenuItem onClick={handleSetBase} className="hover:bg-slate-100 dark:hover:bg-slate-800">
-                <Target className="mr-2 h-4 w-4 text-indigo-600" />
-                Use as Base Price
-            </DropdownMenuItem>
-        )}
         <DropdownMenuItem onClick={handleDelete} className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
           <Trash2 className="mr-2 h-4 w-4" />
           Remove Asset

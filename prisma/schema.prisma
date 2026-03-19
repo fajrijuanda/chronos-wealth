@@ -26,6 +26,8 @@ model AppUser {
   id              String               @id @default(cuid())
   email           String               @unique
   displayName     String
+  profilePhotoUrl String?
+  bio             String?
   boothBasePrice  Float
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -36,8 +38,24 @@ model AppUser {
   incomeSources   IncomeSource[]       @relation("UserIncomeSources")
   gotProposals    JointBoothProposal[] @relation("ProposalPartner")
   sentProposals   JointBoothProposal[] @relation("ProposalRequester")
+  nonBoothAssets  UserAsset[]          @relation("UserNonBoothAssets")
   boothTarget     UserBoothTarget?
   financeProfile  UserFinanceProfile?
+}
+
+model UserAsset {
+  id             String    @id @default(cuid())
+  ownerUserId    String
+  type           AssetType
+  name           String
+  estimatedValue Float
+  quantity       Float?
+  unit           String?
+  notes          String?
+  acquiredAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  ownerUser      AppUser   @relation("UserNonBoothAssets", fields: [ownerUserId], references: [id], onDelete: Cascade)
 }
 
 model UserFinanceProfile {
@@ -230,4 +248,10 @@ enum BoothPurchaseTiming {
 enum BoothPackageType {
   EXCLUSIVE
   ECONOMY
+}
+
+enum AssetType {
+  GOLD
+  PROPERTY
+  OTHER
 }

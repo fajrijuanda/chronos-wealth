@@ -20,11 +20,13 @@ import { BoothPackageType, BoothSelectionType } from "@prisma/client";
 export function ProposeBoothDialog({ 
     email, 
     basePrice, 
-    friends 
+    friends,
+    disabled = false,
 }: { 
     email: string, 
     basePrice: number, 
-    friends: Array<{ email: string, name: string }> 
+    friends: Array<{ email: string, name: string }>,
+    disabled?: boolean,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { showLoading, showSuccess, showError } = useStatus();
@@ -81,12 +83,12 @@ export function ProposeBoothDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-2xl shadow-md bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-            <PlusCircle className="w-4 h-4" />
-            Buy / Propose Booth
+                <Button disabled={disabled} className="rounded-2xl shadow-md bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                    <PlusCircle className="w-4 h-4" />
+                    Buy / Propose Booth
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[95vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-175 max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ajukan Pembelian / Kolaborasi Booth</DialogTitle>
           <DialogDescription>
@@ -98,21 +100,32 @@ export function ProposeBoothDialog({
             <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Basic Info</h4>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Partner Kolaborasi</label>
+                                        <label htmlFor="proposal-partner-email" className="text-sm font-medium">Partner Kolaborasi</label>
                     <select
+                                                id="proposal-partner-email"
                         name="partnerEmail"
+                                                title="Pilih partner kolaborasi"
                         required
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
                     >
-                        {friends.map(f => (
-                            <option key={f.email} value={f.email}>{f.name} ({f.email})</option>
-                        ))}
-                        {friends.length === 0 && <option value="" disabled>Tambahkan partner terlebih dahulu</option>}
+                                            {friends.length > 0 ? (
+                                                friends.map((f) => (
+                                                    <option key={f.email} value={f.email}>{f.name} ({f.email})</option>
+                                                ))
+                                            ) : (
+                                                <option value="" disabled>Tambahkan partner terlebih dahulu</option>
+                                            )}
                     </select>
+                                        {friends.length === 0 ? (
+                                            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                                Belum ada partner accepted. Hubungkan user lain dulu di tab Connect.
+                                            </p>
+                                        ) : null}
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Nama Booth</label>
+                                        <label htmlFor="proposal-booth-name" className="text-sm font-medium">Nama Booth</label>
                     <input
+                                                id="proposal-booth-name"
                         name="boothName"
                         required
                         placeholder="Contoh: Booth Durian Kemayoran"
@@ -120,9 +133,11 @@ export function ProposeBoothDialog({
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Booth Price (Rp)</label>
+                    <label htmlFor="proposal-booth-price" className="text-sm font-medium">Booth Price (Rp)</label>
                     <input
+                        id="proposal-booth-price"
                         name="boothPrice"
+                        title="Masukkan harga booth"
                         type="number"
                         defaultValue={basePrice}
                         required
@@ -134,9 +149,11 @@ export function ProposeBoothDialog({
             <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Financial Simulation</h4>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Saldo Cash Anda (Rp)</label>
+                    <label htmlFor="proposal-requester-balance" className="text-sm font-medium">Saldo Cash Anda (Rp)</label>
                     <input
+                        id="proposal-requester-balance"
                         name="requesterAvailableBalance"
+                        title="Masukkan saldo cash Anda"
                         type="number"
                         min={0}
                         required
@@ -145,9 +162,11 @@ export function ProposeBoothDialog({
                     <p className="text-[10px] text-slate-400 italic">Sistem akan membagi sisa modal ke partner Anda sesuai harga dasar booth mereka.</p>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Booth Price di Partner (Rp)</label>
+                    <label htmlFor="proposal-partner-booth-price" className="text-sm font-medium">Booth Price di Partner (Rp)</label>
                     <input
+                        id="proposal-partner-booth-price"
                         name="partnerBoothPrice"
+                        title="Masukkan harga booth acuan partner"
                         type="number"
                         defaultValue={9500000}
                         required
@@ -155,9 +174,11 @@ export function ProposeBoothDialog({
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Target Monthly Income (Rp)</label>
+                    <label htmlFor="proposal-monthly-income" className="text-sm font-medium">Target Monthly Income (Rp)</label>
                     <input
+                        id="proposal-monthly-income"
                         name="expectedMonthlyIncome"
+                        title="Masukkan target income bulanan"
                         type="number"
                         defaultValue={1000000}
                         required
@@ -171,9 +192,11 @@ export function ProposeBoothDialog({
             <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Advanced Ops</h4>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Package Type</label>
+                    <label htmlFor="proposal-package-type" className="text-sm font-medium">Package Type</label>
                     <select
+                        id="proposal-package-type"
                         name="packageType"
+                        title="Pilih jenis paket booth"
                         defaultValue={BoothPackageType.ECONOMY}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
                     >
@@ -182,9 +205,11 @@ export function ProposeBoothDialog({
                     </select>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">MoU Signing Date</label>
+                    <label htmlFor="proposal-mou-signed-at" className="text-sm font-medium">MoU Signing Date</label>
                     <input
+                        id="proposal-mou-signed-at"
                         name="mouSignedAt"
+                        title="Pilih tanggal tanda tangan MoU"
                         type="date"
                         defaultValue={new Date().toISOString().slice(0, 10)}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
@@ -194,9 +219,11 @@ export function ProposeBoothDialog({
             <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Referrals & Notes</h4>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Referral Economy Booths</label>
+                    <label htmlFor="proposal-referral-economy" className="text-sm font-medium">Referral Economy Booths</label>
                     <input
+                        id="proposal-referral-economy"
                         name="referralEconomyBooths"
+                        title="Masukkan jumlah booth referral ekonomi"
                         type="number"
                         min={0}
                         defaultValue={0}
@@ -205,9 +232,11 @@ export function ProposeBoothDialog({
                     <p className="text-[10px] text-slate-400 italic">Komisi Rp 50.000 x Jumlah Booth (khusus Economy).</p>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Booth Selection Type</label>
+                    <label htmlFor="proposal-selection-type" className="text-sm font-medium">Booth Selection Type</label>
                     <select
+                        id="proposal-selection-type"
                         name="selectedBoothType"
+                        title="Pilih tipe pemilihan booth"
                         defaultValue={BoothSelectionType.NEW_BOOTH}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
                     >
@@ -222,7 +251,7 @@ export function ProposeBoothDialog({
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                        <Button type="submit" disabled={friends.length === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
               Buy / Submit Proposal
             </Button>
           </DialogFooter>

@@ -1,11 +1,54 @@
-import { simulateCollaborativeGrowth } from "@/actions/simulation";
+import { simulateCollaborativeGrowth, simulateSingleUserGrowth } from "@/actions/simulation";
 import { getCollaborationWorkspace } from "@/actions/collaboration";
-import { Calculator, Users, TrendingUp, CalendarDays } from "lucide-react";
+import { Calculator, Users, TrendingUp, CalendarDays, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CsvActions } from "@/components/simulation/CsvActions";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate } from "@/lib/date-format";
 import { SimulationSettingsDialog } from "./SimulationSettingsDialog";
+import { ManualPriceForm } from "../assets/ManualPriceForm";
+import { getActiveUserEmail } from "@/lib/active-user";
+
+type SingleSimulation = Awaited<ReturnType<typeof simulateSingleUserGrowth>>;
+type CollaborativeSimulation = Awaited<ReturnType<typeof simulateCollaborativeGrowth>>;
+type SimulationParticipantView = {
+  userId: string;
+  email: string;
+  displayName: string;
+  boothPrice: number;
+  monthlyExpense: number;
+  purchaseTiming: "START_OF_MONTH" | "END_OF_MONTH";
+  idleCashTarget: number;
+  holdingFundAccumulated: number;
+  personalHoldingTarget: number;
+  holdingLaunchDate: Date;
+  pt2LaunchDate: Date;
+  projectedMonthlyIncome: number;
+  boothEquivalentOwned: number;
+  targetBoothEquivalent: number;
+  activeBooths: number;
+  cashBalance: number;
+  bankBalance: number;
+  personalPt2Target: number;
+  pt2FundAccumulated: number;
+  plans: Array<{
+    month: string;
+    purchaseDay: number;
+    boothsAdded: number;
+    monthlyBoothIncome: number;
+    monthlyCommissionIncome: number;
+    monthlyHoldingSaved: number;
+    monthlyPt2Saved: number;
+    totalBoothsEquivalent: number;
+    monthEndCash: number;
+    contractEvents: Array<{
+      day: number;
+      amount: number;
+      label: string;
+      type: EventFilter;
+    }>;
+  }>;
+};
 
 type EventFilter =
   | "all"
@@ -216,11 +259,11 @@ export default async function SimulationPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
+  const activeEmail = await getActiveUserEmail(
+    typeof sp.user === "string" ? sp.user : undefined,
+  );
   const targetDateStr = typeof sp.date === "string" ? sp.date : "2028-08-01";
-  const primaryEmail =
-    typeof sp.primary === "string" ? sp.primary : "owner@chronos.local";
-  const partnerEmail =
-    typeof sp.partner === "string" ? sp.partner : "partner@chronos.local";
+  const partnerEmailRaw = typeof sp.partner === "string" ? sp.partner.trim().toLowerCase() : "";
   const eventFilterRaw = typeof sp.eventFilter === "string" ? sp.eventFilter : "all";
   const delimiterRaw = typeof sp.delimiter === "string" ? sp.delimiter : "comma";
   const includePt2CsvRaw = typeof sp.includePt2Csv === "string" ? sp.includePt2Csv : "yes";
@@ -236,16 +279,30 @@ export default async function SimulationPage({
   const includePt2Csv = includePt2CsvRaw !== "no";
 
   const targetDate = new Date(targetDateStr);
-  const simulation = await simulateCollaborativeGrowth({
-    targetDate,
-    primaryEmail,
-    partnerEmail,
-  });
+  const workspace = await getCollaborationWorkspace(activeEmail);
+  const acceptedFriends = workspace.friendships.filter((friendship) => friendship.status === "ACCEPTED");
+  const selectedFriend = acceptedFriends.find(
+    (friendship) => friendship.friend.email.toLowerCase() === partnerEmailRaw,
+  );
 
-  const workspace = await getCollaborationWorkspace(primaryEmail);
+  const simulation: SingleSimulation | CollaborativeSimulation = selectedFriend
+    ? await simulateCollaborativeGrowth({
+        targetDate,
+        primaryEmail: activeEmail,
+        partnerEmail: selectedFriend.friend.email,
+      })
+    : await simulateSingleUserGrowth({
+        targetDate,
+        email: activeEmail,
+      });
+
+  const partnerParticipant = "partner" in simulation ? simulation.partner : null;
+  const participants = (partnerParticipant
+    ? [simulation.primary, partnerParticipant]
+    : [simulation.primary]) as SimulationParticipantView[];
 
   const combinedCsvContent = buildCombinedContractEventsCsv({
-    users: [simulation.primary, simulation.partner].map((user) => ({
+    users: participants.map((user) => ({
       displayName: user.displayName,
       email: user.email,
       plans: user.plans,
@@ -262,10 +319,8 @@ export default async function SimulationPage({
     delimiter,
     includePt2Csv,
   });
-  const combinedPt2Fund =
-    simulation.primary.pt2FundAccumulated + simulation.partner.pt2FundAccumulated;
-  const combinedPt2Target =
-    simulation.primary.personalPt2Target + simulation.partner.personalPt2Target;
+  const combinedPt2Fund = participants.reduce((acc, user) => acc + user.pt2FundAccumulated, 0);
+  const combinedPt2Target = participants.reduce((acc, user) => acc + user.personalPt2Target, 0);
 
   return (
     <div className="space-y-8 pb-10">
@@ -273,7 +328,7 @@ export default async function SimulationPage({
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Simulation</h1>
           <p className="text-slate-500 dark:text-slate-400">
-            Simulasi pertumbuhan booth kolaboratif berdasarkan budget, pendapatan, dan strategi timing.
+            Simulasi pertumbuhan booth personal atau kolaboratif berdasarkan budget, pendapatan, dan strategi timing.
           </p>
         </div>
       </div>
@@ -285,6 +340,20 @@ export default async function SimulationPage({
               <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <h2 className="font-bold text-lg">Simulation Controls</h2>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/70 dark:bg-slate-900/40 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
+              <ArrowUpRight className="h-4 w-4 text-indigo-500" />
+              <h3 className="font-semibold">Acuan Harga Dasar Booth</h3>
+            </div>
+            <p className="text-xs text-slate-500">
+              Nilai ini dipakai sebagai basis perhitungan strategi pembelian booth di simulasi.
+            </p>
+            <ManualPriceForm
+              email={workspace.currentUser.email}
+              currentPrice={workspace.currentUser.boothBasePrice}
+            />
           </div>
 
           <form className="space-y-5">
@@ -302,34 +371,42 @@ export default async function SimulationPage({
             </div>
 
             <div className="space-y-2 text-slate-500">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Participating Emails</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Simulation Participants</p>
                 <div className="flex flex-col gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-white/5">
                     <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Primary (Owner)</label>
-                        <input
-                            name="primary"
-                            type="email"
-                            defaultValue={primaryEmail}
-                            className="w-full bg-transparent text-sm font-semibold outline-none text-slate-800 dark:text-white"
-                        />
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Primary (Owner)</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white">{workspace.currentUser.email}</p>
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-slate-800" />
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-slate-400">Partner</label>
-                        <input
-                            name="partner"
-                            type="email"
-                            defaultValue={partnerEmail}
-                            className="w-full bg-transparent text-sm font-semibold outline-none text-slate-800 dark:text-white"
-                        />
+                    <div className="space-y-2">
+                      <label htmlFor="sim-partner-email" className="text-[10px] uppercase font-bold text-slate-400">Partner (Optional)</label>
+                      <select
+                        id="sim-partner-email"
+                        name="partner"
+                        defaultValue={selectedFriend?.friend.email ?? ""}
+                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-black/20 outline-none text-sm transition-all"
+                      >
+                        <option value="">Tanpa partner (simulasi pribadi)</option>
+                        {acceptedFriends.map((friendship) => (
+                          <option key={friendship.id} value={friendship.friend.email}>
+                            {friendship.friend.displayName} ({friendship.friend.email})
+                          </option>
+                        ))}
+                      </select>
+                      {acceptedFriends.length === 0 ? (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                          Belum ada teman accepted. Tambahkan koneksi di halaman Profile tab Connect.
+                        </p>
+                      ) : null}
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-400">Format CSV</label>
+                  <label htmlFor="sim-csv-delimiter" className="text-xs font-black uppercase tracking-widest text-slate-400">Format CSV</label>
                     <select
+                    id="sim-csv-delimiter"
                         name="delimiter"
                         defaultValue={delimiter}
                         className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
@@ -339,8 +416,9 @@ export default async function SimulationPage({
                     </select>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-400">Include PT2?</label>
+                  <label htmlFor="sim-include-pt2" className="text-xs font-black uppercase tracking-widest text-slate-400">Include PT2?</label>
                     <select
+                    id="sim-include-pt2"
                         name="includePt2Csv"
                         defaultValue={includePt2Csv ? "yes" : "no"}
                         className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
@@ -352,10 +430,11 @@ export default async function SimulationPage({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">
+              <label htmlFor="sim-event-filter" className="text-xs font-black uppercase tracking-widest text-slate-400">
                 Timeline Filter
               </label>
               <select
+                id="sim-event-filter"
                 name="eventFilter"
                 defaultValue={eventFilter}
                 className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
@@ -377,7 +456,7 @@ export default async function SimulationPage({
                     Recalculate Growth
                 </Button>
                 <SimulationSettingsDialog 
-                    email={primaryEmail} 
+                  email={activeEmail}
                     profile={workspace.financeProfile} 
                 />
             </div>
@@ -386,7 +465,9 @@ export default async function SimulationPage({
 
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-2xl bg-linear-to-br from-blue-600 to-indigo-700 p-8 shadow-lg text-white">
-            <h3 className="text-blue-100 font-medium mb-2">Combined Projected Income on {formatJakartaDate(targetDate)}</h3>
+            <h3 className="text-blue-100 font-medium mb-2">
+              {participants.length > 1 ? "Combined" : "Projected"} Income on {formatJakartaDate(targetDate)}
+            </h3>
             <p className="text-5xl font-bold tracking-tight">
               Rp {formatGroupedNumber(Math.max(0, simulation.combined.totalProjectedIncome))}
             </p>
@@ -406,8 +487,8 @@ export default async function SimulationPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {[simulation.primary, simulation.partner].map((user) => (
+          <div className={`grid grid-cols-1 ${participants.length > 1 ? "xl:grid-cols-2" : ""} gap-6`}>
+            {participants.map((user) => (
               <div key={user.userId} className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
                 <h3 className="text-lg font-semibold mb-1">{user.displayName}</h3>
                 <p className="text-xs text-slate-500 mb-4">{user.email}</p>
@@ -450,8 +531,8 @@ export default async function SimulationPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {[simulation.primary, simulation.partner].map((user) => {
+        <div className={`grid grid-cols-1 ${participants.length > 1 ? "xl:grid-cols-2" : ""} gap-6`}>
+          {participants.map((user) => {
             const eventSummary = getEventSummary(user.plans);
             const csvContent = buildContractEventsCsv({
               userDisplayName: user.displayName,
