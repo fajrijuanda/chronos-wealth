@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Box,
   LayoutDashboard,
   Wallet,
   TrendingDown,
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
+  { name: "Assets", href: "/assets", icon: Box },
   { name: "Income", href: "/income", icon: Wallet },
   { name: "Expenses", href: "/expenses", icon: TrendingDown },
   { name: "Targets", href: "/targets", icon: Target },

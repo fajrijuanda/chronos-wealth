@@ -1,6 +1,5 @@
 import { ensureAppUserByEmail, getAppUserByEmail } from "@/actions/collaboration";
 import { getSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
-import { formatGroupedNumber } from "@/lib/number-format";
 import { redirect } from "next/navigation";
 
 export default async function RegisterPage({
@@ -21,8 +20,6 @@ export default async function RegisterPage({
 
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const displayName = String(formData.get("displayName") ?? "").trim();
-    const boothBasePriceRaw = String(formData.get("boothBasePrice") ?? "").trim();
-    const boothBasePrice = Number(boothBasePriceRaw.replaceAll(",", ""));
 
     if (!email || !email.includes("@")) {
       redirect("/register?error=Please%20enter%20a%20valid%20email");
@@ -30,10 +27,6 @@ export default async function RegisterPage({
 
     if (!displayName) {
       redirect("/register?error=Please%20enter%20your%20name");
-    }
-
-    if (!Number.isFinite(boothBasePrice) || boothBasePrice <= 0) {
-      redirect("/register?error=Booth%20base%20price%20must%20be%20greater%20than%200");
     }
 
     try {
@@ -45,7 +38,6 @@ export default async function RegisterPage({
       await ensureAppUserByEmail({
         email,
         displayName,
-        boothBasePrice,
       });
 
       await setSessionUserEmail(email);
@@ -98,22 +90,6 @@ export default async function RegisterPage({
             />
           </div>
 
-          <div>
-            <label htmlFor="register-booth-price" className="block text-sm font-medium">
-              Harga Booth Dasar (Rp)
-            </label>
-            <input
-              id="register-booth-price"
-              name="boothBasePrice"
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9,]*"
-              defaultValue={formatGroupedNumber(7_500_000)}
-              required
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
-            />
-          </div>
-
           <button
             type="submit"
             className="w-full rounded-xl px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700"
@@ -121,6 +97,10 @@ export default async function RegisterPage({
             Daftar
           </button>
         </form>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
+          Harga booth dasar simulasi bisa dipilih nanti di halaman Assets.
+        </p>
 
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 text-center">
           Sudah punya akun?{" "}

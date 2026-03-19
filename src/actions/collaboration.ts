@@ -446,13 +446,57 @@ export async function getUserBoothPortfolio(userId: string) {
   });
 
   return ownerships.map((ownership) => ({
+    ownershipId: ownership.id,
     boothId: ownership.boothId,
     boothName: ownership.booth.name,
+    packageType: ownership.booth.packageType,
     expectedMonthlyIncome: ownership.booth.expectedMonthlyIncome,
     revenueSharePct: ownership.revenueSharePct,
     capitalAmount: ownership.capitalAmount,
     isShared: ownership.booth.isShared,
   }));
+}
+
+export async function setSimulationBaseBoothByEmail(input: {
+  email: string;
+  boothId: string;
+}) {
+  const user = await ensureAppUserByEmail({ email: input.email });
+
+  const ownership = await prisma.boothOwnership.findFirst({
+    where: {
+      userId: user.id,
+      boothId: input.boothId,
+    },
+    include: {
+      booth: true,
+    },
+  });
+
+  if (!ownership) {
+    throw new Error("Booth not found in your portfolio");
+  }
+
+  const updatedUser = await prisma.appUser.update({
+    where: { id: user.id },
+    data: {
+      boothBasePrice: ownership.capitalAmount,
+    },
+  });
+
+  revalidatePath("/assets");
+  revalidatePath("/simulation");
+  revalidatePath("/collaboration");
+
+  return {
+    user: updatedUser,
+    selectedBooth: {
+      boothId: ownership.boothId,
+      boothName: ownership.booth.name,
+      packageType: ownership.booth.packageType,
+      basePrice: ownership.capitalAmount,
+    },
+  };
 }
 
 export async function upsertUserFinanceProfile(data: {
