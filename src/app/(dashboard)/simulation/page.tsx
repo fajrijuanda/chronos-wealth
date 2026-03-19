@@ -1,13 +1,11 @@
 import { simulateCollaborativeGrowth, simulateSingleUserGrowth } from "@/actions/simulation";
 import { getCollaborationWorkspace } from "@/actions/collaboration";
-import { Calculator, CalendarDays, ArrowUpRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CalendarDays } from "lucide-react";
 import { CsvActions } from "@/components/simulation/CsvActions";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate } from "@/lib/date-format";
-import { SimulationSettingsDialog } from "./SimulationSettingsDialog";
-import { ManualPriceForm } from "../assets/ManualPriceForm";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { SimulationControlPanel } from "./SimulationControlPanel";
 
 type SingleSimulation = Awaited<ReturnType<typeof simulateSingleUserGrowth>>;
 type CollaborativeSimulation = Awaited<ReturnType<typeof simulateCollaborativeGrowth>>;
@@ -348,158 +346,24 @@ export default async function SimulationPage({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-1 surface-card p-6 h-fit space-y-6 lg:sticky lg:top-20">
-          <div className="flex items-center gap-3 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-              <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h2 className="font-bold text-lg">Simulation Controls</h2>
-          </div>
-
-          <div className="surface-card-soft p-4 space-y-3">
-            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
-              <ArrowUpRight className="h-4 w-4 text-indigo-500" />
-              <h3 className="font-semibold">Acuan Harga Dasar Booth</h3>
-            </div>
-            <p className="text-xs text-slate-500">
-              Nilai ini dipakai sebagai basis perhitungan strategi pembelian booth di simulasi.
-            </p>
-            <ManualPriceForm
-              email={workspace.currentUser.email}
-              currentPrice={workspace.currentUser.boothBasePrice}
-            />
-          </div>
-
-          <form className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="sim-target-date" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Target Date
-              </label>
-              <input
-                id="sim-target-date"
-                name="date"
-                type="date"
-                defaultValue={targetDateStr}
-                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-
-            <div className="space-y-2 text-slate-500">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Simulation Participants</p>
-                <div className="flex flex-col gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-white/5">
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-slate-400">Primary (Owner)</p>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-white">{workspace.currentUser.email}</p>
-                    </div>
-                    <div className="h-px bg-slate-100 dark:bg-slate-800" />
-                    <div className="space-y-2">
-                      <label htmlFor="sim-partner-email" className="text-[10px] uppercase font-bold text-slate-400">Partner (Optional)</label>
-                      <select
-                        id="sim-partner-email"
-                        name="partner"
-                        defaultValue={selectedFriend?.friend.email ?? ""}
-                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-black/20 outline-none text-sm transition-all"
-                      >
-                        <option value="">Tanpa partner (simulasi pribadi)</option>
-                        {acceptedFriends.map((friendship) => (
-                          <option key={friendship.id} value={friendship.friend.email}>
-                            {friendship.friend.displayName} ({friendship.friend.email})
-                          </option>
-                        ))}
-                      </select>
-                      {acceptedFriends.length === 0 ? (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                          Belum ada teman accepted. Tambahkan koneksi di halaman Profile tab Connect.
-                        </p>
-                      ) : null}
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="sim-csv-delimiter" className="text-xs font-black uppercase tracking-widest text-slate-400">Format CSV</label>
-                    <select
-                    id="sim-csv-delimiter"
-                        name="delimiter"
-                        defaultValue={delimiter}
-                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
-                    >
-                        <option value="comma">Comma (,)</option>
-                        <option value="semicolon">Semicolon (;)</option>
-                    </select>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="sim-include-pt2" className="text-xs font-black uppercase tracking-widest text-slate-400">Include PT2?</label>
-                    <select
-                    id="sim-include-pt2"
-                        name="includePt2Csv"
-                        defaultValue={includePt2Csv ? "yes" : "no"}
-                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
-                    >
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className="space-y-3 rounded-xl border border-slate-200/70 dark:border-slate-800 p-3">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Target Plans for Simulation</p>
-              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-                <input
-                  type="checkbox"
-                  name="includeHolding"
-                  value="yes"
-                  defaultChecked={includeHoldingPlan}
-                />
-                Include Holding Capital Plan
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-                <input
-                  type="checkbox"
-                  name="includePt2"
-                  value="yes"
-                  defaultChecked={includePt2Plan}
-                />
-                Include PT 2 Urunan Plan
-              </label>
-              <p className="text-[11px] text-slate-500">
-                Target Holding/PT2 hanya dihitung jika dipilih di sini.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="sim-event-filter" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Timeline Filter
-              </label>
-              <select
-                id="sim-event-filter"
-                name="eventFilter"
-                defaultValue={eventFilter}
-                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
-              >
-                <option value="all">All Lifecycle Events</option>
-                <option value="renewal">Renewal (Kontrak)</option>
-                <option value="capital_return">Capital Return</option>
-                <option value="takeover">Takeover</option>
-                <option value="ended">Ended</option>
-                <option value="pt2_contribution">PT2 Urunan</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-3 pt-4">
-                <Button
-                    type="submit"
-                    className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 h-12 text-md font-bold shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all active:scale-[0.98]"
-                >
-                    Recalculate Growth
-                </Button>
-                <SimulationSettingsDialog 
-                  email={activeEmail}
-                    profile={workspace.financeProfile} 
-                />
-            </div>
-          </form>
+        <div className="lg:col-span-1">
+          <SimulationControlPanel
+            activeEmail={activeEmail}
+            basePrice={workspace.currentUser.boothBasePrice}
+            initialTargetDate={targetDateStr}
+            initialPartnerEmail={selectedFriend?.friend.email ?? ""}
+            initialDelimiter={delimiter}
+            initialIncludePt2Csv={includePt2Csv}
+            initialEventFilter={eventFilter}
+            initialIncludeHoldingPlan={includeHoldingPlan}
+            initialIncludePt2Plan={includePt2Plan}
+            acceptedFriends={acceptedFriends.map((friendship) => ({
+              id: friendship.id,
+              email: friendship.friend.email,
+              displayName: friendship.friend.displayName,
+            }))}
+            financeProfile={workspace.financeProfile}
+          />
         </div>
 
         <div className="lg:col-span-2 space-y-6">
