@@ -62,7 +62,7 @@ export function StatusModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && type !== "loading" && onClose()}>
-      <DialogContent showCloseButton={type !== "loading"} className="sm:max-w-[400px] border-none shadow-2xl overflow-hidden p-0">
+      <DialogContent showCloseButton={type !== "loading"} className="max-w-[calc(100%-2.5rem)] sm:max-w-[400px] border-none shadow-2xl overflow-hidden p-0 rounded-2xl">
          <div className="p-8 flex flex-col items-center text-center">
             <div className={cn("mb-6 p-4 rounded-full bg-slate-50 dark:bg-slate-900/50", type === "loading" && "animate-pulse")}>
                 {config.icon}

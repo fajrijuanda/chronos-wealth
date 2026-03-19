@@ -10,6 +10,8 @@ import { ManualPriceForm } from "./ManualPriceForm";
 import { AddAssetButton } from "./AddAssetButton";
 import { AssetTableRowActions } from "./AssetTableRowActions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AssetsPage({
   searchParams,
 }: {

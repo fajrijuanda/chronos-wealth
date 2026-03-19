@@ -48,19 +48,18 @@ export async function ensureAppUserByEmail(input: {
     throw new Error("A valid user email is required");
   }
 
-  const boothBasePrice = input.boothBasePrice ?? 0;
-  ensurePositive(boothBasePrice === 0 ? 1 : boothBasePrice, "boothBasePrice"); // Allow 0 but ensure positive for validation if needed
+  // Build the update object dynamically to only update what's provided
+  const updateData: { displayName?: string; boothBasePrice?: number } = {};
+  if (input.displayName) updateData.displayName = input.displayName;
+  if (input.boothBasePrice !== undefined) updateData.boothBasePrice = input.boothBasePrice;
 
   const result = await prisma.appUser.upsert({
     where: { email },
-    update: {
-      displayName: input.displayName ?? formatDisplayNameFromEmail(email),
-      boothBasePrice,
-    },
+    update: updateData,
     create: {
       email,
       displayName: input.displayName ?? formatDisplayNameFromEmail(email),
-      boothBasePrice,
+      boothBasePrice: input.boothBasePrice ?? 0,
     },
   });
 
@@ -186,6 +185,7 @@ export async function createJointBoothProposal(
   });
 
   revalidatePath("/income");
+  revalidatePath("/assets");
   return proposal;
 }
 
@@ -203,12 +203,17 @@ export async function decideBoothPurchaseStrategy(input: {
   selectedBoothType: BoothSelectionType;
   notes?: string;
 }) {
-  ensurePositive(input.boothPrice, "boothPrice");
-  ensurePositive(input.partnerBoothPrice, "partnerBoothPrice");
+  if (input.boothPrice < 0) throw new Error("boothPrice must be at least 0");
+  if (input.partnerBoothPrice < 0) throw new Error("partnerBoothPrice must be at least 0");
 
   if (input.requesterAvailableBalance >= input.boothPrice) {
     const booth = await prisma.$transaction(async (tx) => {
       const isExclusive = (input.packageType ?? BoothPackageType.ECONOMY) === BoothPackageType.EXCLUSIVE;
+      const existingBooth = await tx.booth.findUnique({ where: { name: input.boothName } });
+      if (existingBooth) {
+          throw new Error(`Booth with name "${input.boothName}" already exists in the system.`);
+      }
+
       const createdBooth = await tx.booth.create({
         data: {
           name: input.boothName,
@@ -237,6 +242,7 @@ export async function decideBoothPurchaseStrategy(input: {
 
     revalidatePath("/income");
     revalidatePath("/targets");
+    revalidatePath("/assets");
 
     return {
       mode: "SELF_PURCHASE" as const,

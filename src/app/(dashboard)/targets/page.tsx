@@ -8,6 +8,8 @@ import { AddSavingGoalDialog } from "./AddSavingGoalDialog";
 import { GoalCardActions } from "./GoalCardActions";
 import { EditBoothTargetDialog } from "./EditBoothTargetDialog";
 
+export const dynamic = "force-dynamic";
+
 export default async function TargetsPage({
     searchParams,
 }: {

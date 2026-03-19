@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { AddIncomeDialog } from "./AddIncomeDialog";
 import { IncomeTableRowActions } from "./IncomeTableRowActions";
 
+export const dynamic = "force-dynamic";
+
 export default async function IncomePage({
     searchParams,
 }: {
