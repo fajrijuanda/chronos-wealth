@@ -3,6 +3,7 @@
 import {
   NotificationPriority,
   NotificationType,
+  Prisma,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -14,7 +15,7 @@ export async function createUserNotification(input: {
   title: string;
   body: string;
   href?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }) {
   const result = await prisma.userNotification.create({
     data: {
@@ -24,7 +25,7 @@ export async function createUserNotification(input: {
       title: input.title,
       body: input.body,
       href: input.href ?? null,
-      metadata: input.metadata ?? null,
+      metadata: input.metadata,
     },
   });
 

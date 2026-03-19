@@ -45,7 +45,7 @@ export function Sidebar({
   };
 }) {
   const pathname = usePathname();
-  const transitionTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const transitionTimer = useRef<number | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("chronos-sidebar-collapsed") === "1";

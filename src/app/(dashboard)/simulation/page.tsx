@@ -12,6 +12,33 @@ type CollaborativeSimulation = Awaited<ReturnType<typeof simulateCollaborativeGr
 
 type EventFilter = "all" | "renewal" | "capital_return" | "takeover" | "ended";
 type CsvDelimiter = "comma" | "semicolon";
+type SimulationParticipant = {
+  userId: string;
+  displayName: string;
+  email: string;
+  boothPrice: number;
+  monthlyExpense: number;
+  purchaseTiming: "START_OF_MONTH" | "END_OF_MONTH";
+  idleCashTarget: number;
+  boothEquivalentOwned: number;
+  projectedMonthlyIncome: number;
+  targetBoothEquivalent: number;
+  plans: Array<{
+    month: string;
+    purchaseDay: number;
+    boothsAdded: number;
+    monthlyBoothIncome: number;
+    monthlyCommissionIncome: number;
+    totalBoothsEquivalent: number;
+    monthEndCash: number;
+    contractEvents: Array<{
+      day: number;
+      amount: number;
+      label: string;
+      type: EventFilter;
+    }>;
+  }>;
+};
 
 function getEventBadgeClass(eventType: EventFilter) {
   switch (eventType) {
@@ -182,9 +209,9 @@ export default async function SimulationPage({
       });
 
   const partnerParticipant = "partner" in simulation ? simulation.partner : null;
-  const participants = partnerParticipant
-    ? [simulation.primary, partnerParticipant]
-    : [simulation.primary];
+  const participants: SimulationParticipant[] = partnerParticipant
+    ? [simulation.primary as SimulationParticipant, partnerParticipant as SimulationParticipant]
+    : [simulation.primary as SimulationParticipant];
 
   const combinedCsvContent = participants
     .map((user) =>
