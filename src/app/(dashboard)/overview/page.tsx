@@ -27,7 +27,7 @@ export default async function OverviewPage({
                 <p className="text-muted-foreground">Welcome back. Here is your financial summary.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 <MetricCard
                     title="Total Balance"
                     value={`Rp ${formatGroupedNumber(metrics.totalBalance)}`}

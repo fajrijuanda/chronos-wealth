@@ -47,6 +47,8 @@ type FinanceProfile = {
   renewExclusiveBoothContracts?: boolean;
 };
 
+const NO_PARTNER_VALUE = "__no_partner__";
+
 export function SimulationControlPanel(props: {
   activeEmail: string;
   basePrice: number;
@@ -63,7 +65,9 @@ export function SimulationControlPanel(props: {
   const router = useRouter();
 
   const [date, setDate] = useState(props.initialTargetDate);
-  const [partnerEmail, setPartnerEmail] = useState(props.initialPartnerEmail);
+  const [partnerEmail, setPartnerEmail] = useState(
+    props.initialPartnerEmail || NO_PARTNER_VALUE,
+  );
   const [delimiter, setDelimiter] = useState<CsvDelimiter>(props.initialDelimiter);
   const [includePt2Csv, setIncludePt2Csv] = useState(props.initialIncludePt2Csv ? "yes" : "no");
   const [eventFilter, setEventFilter] = useState<EventFilter>(props.initialEventFilter);
@@ -78,7 +82,7 @@ export function SimulationControlPanel(props: {
     params.set("includePt2Csv", includePt2Csv);
     params.set("eventFilter", eventFilter);
 
-    if (partnerEmail) {
+    if (partnerEmail !== NO_PARTNER_VALUE) {
       params.set("partner", partnerEmail);
     }
 
@@ -129,7 +133,7 @@ export function SimulationControlPanel(props: {
               <SelectValue placeholder="Tanpa partner (simulasi pribadi)" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
-              <SelectItem value="" className="rounded-xl">Tanpa partner (simulasi pribadi)</SelectItem>
+              <SelectItem value={NO_PARTNER_VALUE} className="rounded-xl">Tanpa partner (simulasi pribadi)</SelectItem>
               {props.acceptedFriends.map((friend) => (
                 <SelectItem key={friend.id} value={friend.email} className="rounded-xl">
                   {friend.displayName} ({friend.email})

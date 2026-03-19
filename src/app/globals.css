@@ -304,3 +304,60 @@
 .animate-float-soft {
   animation: float-soft 4.2s ease-in-out infinite;
 }
+
+@keyframes rise-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.dashboard-page > * {
+  animation: rise-in 0.5s ease-out both;
+}
+
+.dashboard-page > * > * {
+  animation: rise-in 0.55s ease-out both;
+}
+
+.dashboard-page > * > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.dashboard-page > * > *:nth-child(2) {
+  animation-delay: 110ms;
+}
+
+.dashboard-page > * > *:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.dashboard-page > * > *:nth-child(4) {
+  animation-delay: 250ms;
+}
+
+.dashboard-page > * > *:nth-child(5) {
+  animation-delay: 320ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-lift-in,
+  .animate-float-soft,
+  .animate-shimmer-x,
+  .animate-progress,
+  .dashboard-page > *,
+  .dashboard-page > * > * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

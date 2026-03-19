@@ -79,23 +79,23 @@ export default async function ProfilePage({
         </div>
       </div>
 
-      <div className="inline-flex rounded-2xl border border-slate-200 dark:border-slate-800 p-1 bg-white/70 dark:bg-slate-900/60">
+      <div className="inline-flex rounded-2xl border border-white/65 dark:border-white/20 p-1 bg-white/72 dark:bg-slate-900/45 shadow-[0_14px_28px_-22px_rgba(93,101,183,0.95)] backdrop-blur-md">
         <a
           href="/profile?tab=account"
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+          className={`min-w-24 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
             tab === "account"
-              ? "bg-blue-600 text-white"
-              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              ? "bg-linear-to-r from-primary to-[#8f95ea] text-white shadow-[0_12px_22px_-16px_rgba(102,109,192,0.95)]"
+              : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/8"
           }`}
         >
           Account
         </a>
         <a
           href="/profile?tab=connect"
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+          className={`min-w-24 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
             tab === "connect"
-              ? "bg-blue-600 text-white"
-              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              ? "bg-linear-to-r from-primary to-[#8f95ea] text-white shadow-[0_12px_22px_-16px_rgba(102,109,192,0.95)]"
+              : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/8"
           }`}
         >
           Connect
@@ -155,7 +155,7 @@ export default async function ProfilePage({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <MetricCard
               size="sm"
               title="Connected"
@@ -173,6 +173,7 @@ export default async function ProfilePage({
               title="Your Email"
               value={currentUser.email}
               tone="projection"
+              className="col-span-2 lg:col-span-1"
             />
           </div>
 
