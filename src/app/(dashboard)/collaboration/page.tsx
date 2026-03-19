@@ -1,0 +1,400 @@
+import {
+  BoothSelectionType,
+  ProposalStatus,
+} from "@prisma/client";
+import {
+  createJointBoothProposalByEmail,
+  getCollaborationWorkspace,
+  respondFriendRequest,
+  reviewJointBoothProposal,
+  sendFriendRequestByEmail,
+  setUserTargetByEmail,
+} from "@/actions/collaboration";
+import { getActiveUserEmail } from "@/lib/active-user";
+
+export default async function CollaborationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const sp = await searchParams;
+  const activeEmail = getActiveUserEmail(
+    typeof sp.user === "string" ? sp.user : undefined,
+  );
+
+  const workspace = await getCollaborationWorkspace(activeEmail);
+
+  async function handleAddFriend(formData: FormData) {
+    "use server";
+
+    const requesterEmail = String(formData.get("requesterEmail") ?? "");
+    const addresseeEmail = String(formData.get("addresseeEmail") ?? "");
+    const partnerBasePrice = Number(formData.get("addresseeBoothBasePrice") ?? 0);
+
+    await sendFriendRequestByEmail({
+      requesterEmail,
+      addresseeEmail,
+      addresseeBoothBasePrice: partnerBasePrice > 0 ? partnerBasePrice : undefined,
+    });
+  }
+
+  async function handleRespondFriendRequest(formData: FormData) {
+    "use server";
+
+    const friendshipId = String(formData.get("friendshipId") ?? "");
+    const action = String(formData.get("action") ?? "reject");
+
+    if (!friendshipId) return;
+    if (action !== "accept" && action !== "reject") return;
+
+    await respondFriendRequest(friendshipId, action);
+  }
+
+  async function handleProposal(formData: FormData) {
+    "use server";
+
+    const requesterEmail = String(formData.get("requesterEmail") ?? "");
+    const partnerEmail = String(formData.get("partnerEmail") ?? "");
+    const boothName = String(formData.get("boothName") ?? "");
+    const boothPrice = Number(formData.get("boothPrice") ?? 0);
+    const requesterAvailableBalance = Number(
+      formData.get("requesterAvailableBalance") ?? 0,
+    );
+    const partnerBoothPrice = Number(formData.get("partnerBoothPrice") ?? 0);
+    const expectedMonthlyIncome = Number(formData.get("expectedMonthlyIncome") ?? 0);
+    const selection = String(formData.get("selectedBoothType") ?? "NEW_BOOTH");
+    const notes = String(formData.get("notes") ?? "");
+
+    const selectedBoothType =
+      selection === BoothSelectionType.EXISTING_BOOTH
+        ? BoothSelectionType.EXISTING_BOOTH
+        : BoothSelectionType.NEW_BOOTH;
+
+    await createJointBoothProposalByEmail({
+      requesterEmail,
+      partnerEmail,
+      boothName,
+      boothPrice,
+      requesterAvailableBalance,
+      partnerBoothPrice,
+      expectedMonthlyIncome,
+      selectedBoothType,
+      notes: notes || undefined,
+    });
+  }
+
+  async function handleReviewProposal(formData: FormData) {
+    "use server";
+
+    const proposalId = String(formData.get("proposalId") ?? "");
+    const reviewerUserId = String(formData.get("reviewerUserId") ?? "");
+    const decision = String(formData.get("decision") ?? "reject");
+    const reviewerNote = String(formData.get("reviewerNote") ?? "");
+
+    if (!proposalId || !reviewerUserId) return;
+
+    await reviewJointBoothProposal({
+      proposalId,
+      reviewerUserId,
+      approve: decision === "approve",
+      reviewerNote: reviewerNote || undefined,
+    });
+  }
+
+  async function handleSetTarget(formData: FormData) {
+    "use server";
+
+    const email = String(formData.get("email") ?? "");
+    const targetBoothEquivalent = Number(formData.get("targetBoothEquivalent") ?? 0);
+    const revenuePerBooth = Number(formData.get("revenuePerBooth") ?? 0);
+
+    await setUserTargetByEmail({
+      email,
+      targetBoothEquivalent,
+      revenuePerBooth: revenuePerBooth > 0 ? revenuePerBooth : undefined,
+    });
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Collaboration Booth</h1>
+        <p className="text-slate-500 dark:text-slate-400">
+          Active user: <span className="font-semibold">{workspace.currentUser.email}</span>
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Set Personal Booth Target</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Example: target 300 booth = Rp 300.000.000 if revenue per booth is Rp 1.000.000.
+          </p>
+
+          <form action={handleSetTarget} className="space-y-3">
+            <input type="hidden" name="email" value={workspace.currentUser.email} />
+            <label htmlFor="target-booth-equivalent" className="block text-sm font-medium">Target Booth Equivalent</label>
+            <input
+              id="target-booth-equivalent"
+              name="targetBoothEquivalent"
+              type="number"
+              min={1}
+              defaultValue={workspace.targetProgress.targetBoothEquivalent || 300}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+            <label htmlFor="revenue-per-booth" className="block text-sm font-medium">Revenue Per Booth (Rp)</label>
+            <input
+              id="revenue-per-booth"
+              name="revenuePerBooth"
+              type="number"
+              min={1}
+              defaultValue={workspace.targetProgress.revenuePerBooth || 1_000_000}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+            <button className="rounded-xl px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700" type="submit">
+              Save Target
+            </button>
+          </form>
+
+          <div className="mt-5 text-sm text-slate-600 dark:text-slate-300 space-y-1">
+            <p>Target Income: Rp {workspace.targetProgress.targetIncome.toLocaleString("id-ID")}</p>
+            <p>Current Monthly Share: Rp {workspace.targetProgress.monthlyIncomeShare.toLocaleString("id-ID")}</p>
+            <p>Booth Equivalent Achieved: {workspace.targetProgress.boothEquivalentAchieved.toFixed(2)}</p>
+            <p>Progress: {workspace.targetProgress.progressPct.toFixed(2)}%</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Add Friend</h2>
+          <form action={handleAddFriend} className="space-y-3">
+            <input type="hidden" name="requesterEmail" value={workspace.currentUser.email} />
+            <label htmlFor="friend-email" className="block text-sm font-medium">Friend Email</label>
+            <input
+              id="friend-email"
+              name="addresseeEmail"
+              type="email"
+              placeholder="teman@domain.com"
+              required
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+            <label htmlFor="friend-booth-price" className="block text-sm font-medium">Friend Booth Price (Rp)</label>
+            <input
+              id="friend-booth-price"
+              name="addresseeBoothBasePrice"
+              type="number"
+              min={1}
+              defaultValue={9_500_000}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+            <button className="rounded-xl px-4 py-2 bg-blue-600 text-white hover:bg-blue-700" type="submit">
+              Send Request
+            </button>
+          </form>
+
+          <div className="mt-5 space-y-2">
+            {workspace.friendships.length === 0 && (
+              <p className="text-sm text-slate-500">No friendship records yet.</p>
+            )}
+            {workspace.friendships.map((item) => (
+              <div key={item.id} className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <p>
+                    {item.friend.displayName} ({item.friend.email})
+                  </p>
+                  <span className="text-xs font-semibold">{item.status}</span>
+                </div>
+                {item.canRespond && (
+                  <form action={handleRespondFriendRequest} className="mt-2 flex gap-2">
+                    <input type="hidden" name="friendshipId" value={item.id} />
+                    <button name="action" value="accept" className="rounded-md px-3 py-1 text-xs bg-emerald-600 text-white" type="submit">
+                      Accept
+                    </button>
+                    <button name="action" value="reject" className="rounded-md px-3 py-1 text-xs bg-rose-600 text-white" type="submit">
+                      Reject
+                    </button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+        <h2 className="text-xl font-semibold mb-4">Propose Booth Purchase / Joint Venture</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          If your balance is below booth price, system creates a collaboration proposal automatically.
+        </p>
+
+        <form action={handleProposal} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input type="hidden" name="requesterEmail" value={workspace.currentUser.email} />
+
+          <div>
+            <label htmlFor="proposal-partner-email" className="block text-sm font-medium mb-1">Partner Email</label>
+            <input
+              id="proposal-partner-email"
+              name="partnerEmail"
+              type="email"
+              required
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-booth-name" className="block text-sm font-medium mb-1">Booth Name</label>
+            <input
+              id="proposal-booth-name"
+              name="boothName"
+              type="text"
+              required
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-booth-price" className="block text-sm font-medium mb-1">Booth Price (Rp)</label>
+            <input
+              id="proposal-booth-price"
+              name="boothPrice"
+              type="number"
+              min={1}
+              required
+              defaultValue={workspace.currentUser.boothBasePrice}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-available-balance" className="block text-sm font-medium mb-1">Your Available Balance (Rp)</label>
+            <input
+              id="proposal-available-balance"
+              name="requesterAvailableBalance"
+              type="number"
+              min={0}
+              required
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-partner-price" className="block text-sm font-medium mb-1">Partner Booth Price (Rp)</label>
+            <input
+              id="proposal-partner-price"
+              name="partnerBoothPrice"
+              type="number"
+              min={1}
+              defaultValue={9_500_000}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-expected-income" className="block text-sm font-medium mb-1">Expected Monthly Income (Rp)</label>
+            <input
+              id="proposal-expected-income"
+              name="expectedMonthlyIncome"
+              type="number"
+              min={1}
+              defaultValue={1_000_000}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="proposal-selection-type" className="block text-sm font-medium mb-1">Booth Selection</label>
+            <select
+              id="proposal-selection-type"
+              name="selectedBoothType"
+              defaultValue={BoothSelectionType.NEW_BOOTH}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            >
+              <option value={BoothSelectionType.NEW_BOOTH}>New Booth</option>
+              <option value={BoothSelectionType.EXISTING_BOOTH}>Existing Booth</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label htmlFor="proposal-notes" className="block text-sm font-medium mb-1">Notes</label>
+            <textarea
+              id="proposal-notes"
+              name="notes"
+              rows={3}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <button className="rounded-xl px-4 py-2 bg-blue-700 text-white hover:bg-blue-800" type="submit">
+              Execute Purchase Strategy
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Incoming Proposals</h2>
+          <div className="space-y-3">
+            {workspace.incomingProposals.length === 0 && (
+              <p className="text-sm text-slate-500">No incoming proposals.</p>
+            )}
+            {workspace.incomingProposals.map((proposal) => (
+              <div key={proposal.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm">
+                <p className="font-semibold">{proposal.boothName}</p>
+                <p className="text-slate-500">From: {proposal.requester.email}</p>
+                <p>Capital split: Rp {proposal.requesterCapital.toLocaleString("id-ID")} / Rp {proposal.partnerCapital.toLocaleString("id-ID")}</p>
+                <p>Status: {proposal.status}</p>
+
+                {proposal.status === ProposalStatus.PENDING && (
+                  <form action={handleReviewProposal} className="mt-2 flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="proposalId" value={proposal.id} />
+                    <input type="hidden" name="reviewerUserId" value={workspace.currentUser.id} />
+                    <input
+                      type="text"
+                      name="reviewerNote"
+                      aria-label="Reviewer note"
+                      placeholder="Optional note"
+                      className="rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1"
+                    />
+                    <button name="decision" value="approve" className="rounded-md px-3 py-1 text-xs bg-emerald-600 text-white" type="submit">
+                      Approve
+                    </button>
+                    <button name="decision" value="reject" className="rounded-md px-3 py-1 text-xs bg-rose-600 text-white" type="submit">
+                      Reject
+                    </button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Your Booth Portfolio</h2>
+          <div className="space-y-3">
+            {workspace.portfolio.length === 0 && (
+              <p className="text-sm text-slate-500">No booth ownership yet.</p>
+            )}
+            {workspace.portfolio.map((item) => (
+              <div key={item.boothId} className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm">
+                <p className="font-semibold">{item.boothName}</p>
+                <p>Expected Monthly Income: Rp {item.expectedMonthlyIncome.toLocaleString("id-ID")}</p>
+                <p>Your Share: {item.revenueSharePct.toFixed(2)}%</p>
+                <p>Your Capital: Rp {item.capitalAmount.toLocaleString("id-ID")}</p>
+                <p>Type: {item.isShared ? "Shared" : "Owned"}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-4 text-sm text-slate-600 dark:text-slate-300">
+        <p className="font-semibold mb-1">Tip</p>
+        <p>
+          You can switch active user quickly with URL parameter <span className="font-mono">?user=nama@email.com</span>.
+          This helps simulate collaboration flows while auth is not integrated yet.
+        </p>
+      </div>
+    </div>
+  );
+}

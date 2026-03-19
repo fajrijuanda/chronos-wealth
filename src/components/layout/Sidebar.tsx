@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, TrendingDown, Target, LineChart } from "lucide-react";
+import {
+  LayoutDashboard,
+  Wallet,
+  TrendingDown,
+  Target,
+  LineChart,
+  Handshake,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -10,6 +17,7 @@ const links = [
   { name: "Income", href: "/income", icon: Wallet },
   { name: "Expenses", href: "/expenses", icon: TrendingDown },
   { name: "Targets", href: "/targets", icon: Target },
+  { name: "Collaboration", href: "/collaboration", icon: Handshake },
   { name: "Simulation", href: "/simulation", icon: LineChart },
 ];
 
@@ -19,7 +27,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 h-screen max-w-xs flex-col hidden md:flex backdrop-blur-md bg-white/40 dark:bg-black/40 border-r border-white/20 shadow-lg isolate">
       <div className="flex h-16 items-center px-6">
-        <span className="text-2xl font-bold tracking-tight bg-gradient-to-br from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+        <span className="text-2xl font-bold tracking-tight bg-linear-to-br from-blue-600 to-indigo-500 bg-clip-text text-transparent">
           Chronos Wealth
         </span>
       </div>

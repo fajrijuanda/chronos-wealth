@@ -21,6 +21,108 @@ model IncomeSource {
   transactions    Transaction[]
 }
 
+model AppUser {
+  id               String              @id @default(cuid())
+  email            String              @unique
+  displayName      String
+  boothBasePrice   Float
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  sentFriendships  Friendship[]        @relation("FriendshipRequester")
+  gotFriendships   Friendship[]        @relation("FriendshipAddressee")
+  sentProposals    JointBoothProposal[] @relation("ProposalRequester")
+  gotProposals     JointBoothProposal[] @relation("ProposalPartner")
+  boothOwnerships  BoothOwnership[]
+  uploadedSales    BoothMonthlySale[]  @relation("SaleUploader")
+  boothTarget      UserBoothTarget?
+}
+
+model Friendship {
+  id              String            @id @default(cuid())
+  requesterId     String
+  addresseeId     String
+  status          FriendshipStatus  @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  requester       AppUser           @relation("FriendshipRequester", fields: [requesterId], references: [id])
+  addressee       AppUser           @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+
+  @@unique([requesterId, addresseeId])
+}
+
+model JointBoothProposal {
+  id                    String                @id @default(cuid())
+  requesterId           String
+  partnerId             String
+  boothName             String
+  requesterCapital      Float
+  partnerCapital        Float
+  expectedMonthlyIncome Float
+  status                ProposalStatus        @default(PENDING)
+  selectedBoothType     BoothSelectionType
+  notes                 String?
+  proposedAt            DateTime              @default(now())
+  reviewedAt            DateTime?
+  reviewerNote          String?
+  createdBoothId        String?               @unique
+  requester             AppUser               @relation("ProposalRequester", fields: [requesterId], references: [id])
+  partner               AppUser               @relation("ProposalPartner", fields: [partnerId], references: [id])
+  createdBooth          Booth?                @relation("CreatedFromProposal", fields: [createdBoothId], references: [id])
+}
+
+model Booth {
+  id                    String            @id @default(cuid())
+  name                  String
+  expectedMonthlyIncome Float
+  isShared              Boolean           @default(false)
+  active                Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  ownerships            BoothOwnership[]
+  monthlySales          BoothMonthlySale[]
+  createdByProposal     JointBoothProposal?   @relation("CreatedFromProposal")
+
+  @@unique([name])
+}
+
+model BoothOwnership {
+  id               String   @id @default(cuid())
+  boothId          String
+  userId           String
+  capitalAmount    Float
+  revenueSharePct  Float
+  createdAt        DateTime @default(now())
+  booth            Booth    @relation(fields: [boothId], references: [id], onDelete: Cascade)
+  user             AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boothId, userId])
+}
+
+model BoothMonthlySale {
+  id             String   @id @default(cuid())
+  boothId        String
+  month          Int
+  year           Int
+  grossIncome    Float
+  netIncome      Float?
+  uploadedById   String
+  uploadedAt     DateTime @default(now())
+  booth          Booth    @relation(fields: [boothId], references: [id], onDelete: Cascade)
+  uploadedBy     AppUser  @relation("SaleUploader", fields: [uploadedById], references: [id])
+
+  @@unique([boothId, month, year])
+}
+
+model UserBoothTarget {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  targetBoothEquivalent Int
+  revenuePerBooth       Float    @default(1000000)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 // Pencatatan Transaksi Real-time
 model Transaction {
   id              String   @id @default(cuid())
@@ -62,4 +164,22 @@ enum CategoryType {
 enum TxType {
   INCOME
   EXPENSE
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BoothSelectionType {
+  NEW_BOOTH
+  EXISTING_BOOTH
 }

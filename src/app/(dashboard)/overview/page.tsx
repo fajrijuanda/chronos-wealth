@@ -1,6 +1,23 @@
+import { getCollaborationWorkspace } from "@/actions/collaboration";
+import { getDashboardMetrics } from "@/actions/transaction";
+import { getActiveUserEmail } from "@/lib/active-user";
 import { Wallet, TrendingDown, Target } from "lucide-react";
 
-export default function OverviewPage() {
+export default async function OverviewPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+    const sp = await searchParams;
+    const activeEmail = getActiveUserEmail(
+        typeof sp.user === "string" ? sp.user : undefined,
+    );
+
+    const [metrics, workspace] = await Promise.all([
+        getDashboardMetrics(),
+        getCollaborationWorkspace(activeEmail),
+    ]);
+
     return (
         <div className="space-y-8">
             <div>
@@ -17,7 +34,9 @@ export default function OverviewPage() {
                         </div>
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Total Balance</h2>
                     </div>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Rp 45.000.000</p>
+                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Rp {metrics.totalBalance.toLocaleString("id-ID")}
+                    </p>
                 </div>
 
                 {/* Monthly Income Card */}
@@ -28,7 +47,9 @@ export default function OverviewPage() {
                         </div>
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Mo. Income</h2>
                     </div>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Rp 12.500.000</p>
+                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Rp {metrics.monthlyIncome.toLocaleString("id-ID")}
+                    </p>
                 </div>
 
                 {/* Active Targets Card */}
@@ -39,15 +60,27 @@ export default function OverviewPage() {
                         </div>
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Active Targets</h2>
                     </div>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">3 Goals</p>
+                    <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        {workspace.targetProgress.targetBoothEquivalent.toLocaleString("id-ID")} Booth Eq.
+                    </p>
+                    <p className="text-sm text-slate-500">
+                        Monthly share: Rp {workspace.targetProgress.monthlyIncomeShare.toLocaleString("id-ID")}
+                    </p>
                 </div>
             </div>
 
             {/* Placeholder for Recharts Chart */}
-            <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm min-h-[400px]">
+            <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm min-h-100">
                 <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-6">Cashflow Trend</h2>
-                <div className="flex h-[300px] items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                    <span className="text-slate-500">Chart will be rendered here</span>
+                <div className="flex h-75 items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                    <div className="text-center text-slate-500 space-y-1">
+                        <p>
+                            Progress target booth: {workspace.targetProgress.progressPct.toFixed(2)}%
+                        </p>
+                        <p>
+                            Equivalent achieved: {workspace.targetProgress.boothEquivalentAchieved.toFixed(2)} booth
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
