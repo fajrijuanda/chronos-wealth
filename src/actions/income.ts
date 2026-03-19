@@ -74,3 +74,20 @@ export async function toggleIncomeSourceActive(id: string, isActive: boolean) {
   });
   revalidatePath("/income");
 }
+
+export async function updateIncomeSource(id: string, data: Partial<{
+  name: string;
+  category: CategoryType;
+  amount: number;
+  isRecurring: boolean;
+  payoutDate: number | null;
+  expectedDate: Date | null;
+  isActive: boolean;
+}>) {
+  const result = await prisma.incomeSource.update({
+    where: { id },
+    data,
+  });
+  revalidatePath("/income");
+  return result;
+}

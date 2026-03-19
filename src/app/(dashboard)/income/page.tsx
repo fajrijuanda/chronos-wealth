@@ -8,8 +8,10 @@ import { getActiveUserEmail } from "@/lib/active-user";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate, formatJakartaDateTime } from "@/lib/date-format";
 import { redirect } from "next/navigation";
-import { PlusCircle, Wallet, Calendar, CheckCircle2 } from "lucide-react";
+import { Wallet, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AddIncomeDialog } from "./AddIncomeDialog";
+import { IncomeTableRowActions } from "./IncomeTableRowActions";
 
 export default async function IncomePage({
     searchParams,
@@ -28,8 +30,6 @@ export default async function IncomePage({
     ]);
 
     const userQuery = `user=${encodeURIComponent(activeEmail)}`;
-    const flashOk = typeof sp.ok === "string" ? sp.ok : null;
-    const flashError = typeof sp.error === "string" ? sp.error : null;
 
     async function handleSalesUpload(formData: FormData) {
         "use server";
@@ -43,22 +43,25 @@ export default async function IncomePage({
             redirect(`/income?${userQuery}&error=${encodeURIComponent("Please upload an Excel file")}`);
         }
 
+        let result;
         try {
-            const result = await importMonthlyBoothSalesByEmail({
+            result = await importMonthlyBoothSalesByEmail({
                 uploadedByEmail,
                 month,
                 year,
                 file,
             });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Upload failed";
+            redirect(`/income?${userQuery}&error=${encodeURIComponent(message)}`);
+        }
 
+        if (result) {
             redirect(
                 `/income?${userQuery}&ok=${encodeURIComponent(
                     `${result.imported} sales rows imported for ${month}/${year}`,
                 )}`,
             );
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Upload failed";
-            redirect(`/income?${userQuery}&error=${encodeURIComponent(message)}`);
         }
     }
 
@@ -69,23 +72,8 @@ export default async function IncomePage({
                     <h1 className="text-3xl font-bold tracking-tight mb-2">Income Sources</h1>
                     <p className="text-slate-500 dark:text-slate-400">Manage your recurring incomes and one-time projects.</p>
                 </div>
-                <Button className="rounded-2xl shadow-md bg-blue-600 hover:bg-blue-700 text-white gap-2">
-                    <PlusCircle className="w-4 h-4" />
-                    Add Income
-                </Button>
+                <AddIncomeDialog email={activeEmail} />
             </div>
-
-            {flashOk && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm">
-                    {flashOk}
-                </div>
-            )}
-
-            {flashError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm">
-                    {flashError}
-                </div>
-            )}
 
             <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -98,18 +86,19 @@ export default async function IncomePage({
                                 <th className="px-6 py-4 font-medium">Type</th>
                                 <th className="px-6 py-4 font-medium">Payout Date</th>
                                 <th className="px-6 py-4 font-medium">Status</th>
+                                <th className="px-6 py-4 font-medium text-right pr-10">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {incomes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                                         No income sources found. Add one to get started.
                                     </td>
                                 </tr>
                             ) : (
                                 incomes.map((inc) => (
-                                    <tr key={inc.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <tr key={inc.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${!inc.isActive ? 'opacity-50' : ''}`}>
                                         <td className="px-6 py-4 font-medium flex items-center gap-3">
                                             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                                                 <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -137,8 +126,22 @@ export default async function IncomePage({
                                                     <CheckCircle2 className="w-3.5 h-3.5" /> Active
                                                 </div>
                                             ) : (
-                                                <span className="text-slate-400 text-xs">Inactive</span>
+                                                <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 dark:bg-slate-900/40 px-3 py-1 rounded-full w-fit text-xs font-medium border border-slate-200 dark:border-slate-800">
+                                                    Inactive
+                                                </div>
                                             )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right pr-8">
+                                            <IncomeTableRowActions income={{
+                                                id: inc.id,
+                                                name: inc.name,
+                                                amount: inc.amount,
+                                                category: inc.category,
+                                                isRecurring: inc.isRecurring,
+                                                payoutDate: inc.payoutDate,
+                                                expectedDate: inc.expectedDate,
+                                                isActive: inc.isActive
+                                            }} />
                                         </td>
                                     </tr>
                                 ))

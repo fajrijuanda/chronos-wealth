@@ -1,9 +1,11 @@
 import { simulateCollaborativeGrowth } from "@/actions/simulation";
+import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { Calculator, Users, TrendingUp, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CsvActions } from "@/components/simulation/CsvActions";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate } from "@/lib/date-format";
+import { SimulationSettingsDialog } from "./SimulationSettingsDialog";
 
 type EventFilter =
   | "all"
@@ -238,6 +240,8 @@ export default async function SimulationPage({
     partnerEmail,
   });
 
+  const workspace = await getCollaborationWorkspace(primaryEmail);
+
   const combinedCsvContent = buildCombinedContractEventsCsv({
     users: [simulation.primary, simulation.partner].map((user) => ({
       displayName: user.displayName,
@@ -262,24 +266,28 @@ export default async function SimulationPage({
     simulation.primary.personalPt2Target + simulation.partner.personalPt2Target;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Collaborative Booth Simulation</h1>
-        <p className="text-slate-500 dark:text-slate-400">
-          Simulasi ini memperhitungkan budget per user, jadwal pendapatan per tanggal, dan timing beli booth (awal/akhir bulan).
-        </p>
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Simulation</h1>
+          <p className="text-slate-500 dark:text-slate-400">
+            Simulasi pertumbuhan booth kolaboratif berdasarkan budget, pendapatan, dan strategi timing.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm h-fit">
-          <div className="flex items-center gap-2 mb-6 text-slate-800 dark:text-slate-200">
-            <Calculator className="w-5 h-5 text-blue-500" />
-            <h2 className="font-semibold text-lg">Simulation Controls</h2>
+        <div className="lg:col-span-1 rounded-3xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm h-fit space-y-6">
+          <div className="flex items-center gap-3 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+              <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="font-bold text-lg">Simulation Controls</h2>
           </div>
 
-          <form className="space-y-4">
-            <div>
-              <label htmlFor="sim-target-date" className="text-sm font-medium text-slate-600 dark:text-slate-400">
+          <form className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="sim-target-date" className="text-xs font-black uppercase tracking-widest text-slate-400">
                 Target Date
               </label>
               <input
@@ -287,48 +295,71 @@ export default async function SimulationPage({
                 name="date"
                 type="date"
                 defaultValue={targetDateStr}
-                className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               />
             </div>
 
-            <div>
-              <label htmlFor="sim-primary-email" className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Email Kamu
-              </label>
-              <input
-                id="sim-primary-email"
-                name="primary"
-                type="email"
-                defaultValue={primaryEmail}
-                className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+            <div className="space-y-2 text-slate-500">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Participating Emails</p>
+                <div className="flex flex-col gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-white/5">
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400">Primary (Owner)</label>
+                        <input
+                            name="primary"
+                            type="email"
+                            defaultValue={primaryEmail}
+                            className="w-full bg-transparent text-sm font-semibold outline-none text-slate-800 dark:text-white"
+                        />
+                    </div>
+                    <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400">Partner</label>
+                        <input
+                            name="partner"
+                            type="email"
+                            defaultValue={partnerEmail}
+                            className="w-full bg-transparent text-sm font-semibold outline-none text-slate-800 dark:text-white"
+                        />
+                    </div>
+                </div>
             </div>
 
-            <div>
-              <label htmlFor="sim-partner-email" className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Email Teman
-              </label>
-              <input
-                id="sim-partner-email"
-                name="partner"
-                type="email"
-                defaultValue={partnerEmail}
-                className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-400">Format CSV</label>
+                    <select
+                        name="delimiter"
+                        defaultValue={delimiter}
+                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
+                    >
+                        <option value="comma">Comma (,)</option>
+                        <option value="semicolon">Semicolon (;)</option>
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-400">Include PT2?</label>
+                    <select
+                        name="includePt2Csv"
+                        defaultValue={includePt2Csv ? "yes" : "no"}
+                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
+                    >
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
             </div>
 
-            <div>
-              <label htmlFor="sim-event-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Strategy Event Filter
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Timeline Filter
               </label>
               <select
-                id="sim-event-filter"
                 name="eventFilter"
                 defaultValue={eventFilter}
-                className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 outline-none text-sm transition-all"
               >
-                <option value="all">All Events</option>
-                <option value="renewal">Renewal</option>
+                <option value="all">All Lifecycle Events</option>
+                <option value="renewal">Renewal (Kontrak)</option>
                 <option value="capital_return">Capital Return</option>
                 <option value="takeover">Takeover</option>
                 <option value="ended">Ended</option>
@@ -336,42 +367,18 @@ export default async function SimulationPage({
               </select>
             </div>
 
-            <div>
-              <label htmlFor="sim-csv-delimiter" className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                CSV Delimiter
-              </label>
-              <select
-                id="sim-csv-delimiter"
-                name="delimiter"
-                defaultValue={delimiter}
-                className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="comma">Comma (,)</option>
-                <option value="semicolon">Semicolon (;)</option>
-              </select>
+            <div className="flex flex-col gap-3 pt-4">
+                <Button
+                    type="submit"
+                    className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 h-12 text-md font-bold shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all active:scale-[0.98]"
+                >
+                    Recalculate Growth
+                </Button>
+                <SimulationSettingsDialog 
+                    email={primaryEmail} 
+                    profile={workspace.financeProfile} 
+                />
             </div>
-
-            <div>
-              <label htmlFor="sim-include-pt2-csv" className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Include PT2 Urunan In CSV
-              </label>
-              <select
-                id="sim-include-pt2-csv"
-                name="includePt2Csv"
-                defaultValue={includePt2Csv ? "yes" : "no"}
-                className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-6 text-md font-semibold mt-4"
-            >
-              Run Simulation
-            </Button>
           </form>
         </div>
 

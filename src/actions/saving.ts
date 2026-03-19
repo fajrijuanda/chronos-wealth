@@ -37,9 +37,27 @@ export async function updateSavingGoalProgress(
   return result;
 }
 
+export async function updateSavingGoal(
+    id: string,
+    data: {
+        name?: string;
+        targetAmount?: number;
+        currentAmount?: number;
+        deadline?: Date;
+        priority?: number;
+    }
+) {
+    const result = await prisma.savingGoal.update({
+        where: { id },
+        data,
+    });
+    revalidatePath("/targets");
+    return result;
+}
+
 export async function deleteSavingGoal(id: string) {
-  await prisma.savingGoal.delete({
-    where: { id },
-  });
-  revalidatePath("/targets");
+    await prisma.savingGoal.delete({
+        where: { id },
+    });
+    revalidatePath("/targets");
 }

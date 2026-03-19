@@ -16,7 +16,9 @@ export function ManualPriceForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  async function onSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     const price = Number(formData.get("price") ?? 0);
 
     showConfirm({
@@ -40,7 +42,7 @@ export function ManualPriceForm({
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <input type="hidden" name="email" value={email} />
       <div>
         <label className="block text-sm font-medium mb-1 translate-x-1 text-slate-500">

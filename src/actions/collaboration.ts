@@ -783,3 +783,51 @@ export async function setUserFinanceProfileByEmail(input: {
     renewExclusiveBoothContracts: input.renewExclusiveBoothContracts,
   });
 }
+export async function deleteBoothOwnership(ownershipId: string) {
+    const ownership = await prisma.boothOwnership.findUnique({
+        where: { id: ownershipId },
+        include: { booth: true }
+    });
+
+    if (!ownership) throw new Error("Ownership record not found");
+
+    await prisma.boothOwnership.delete({
+        where: { id: ownershipId }
+    });
+
+    // Optionally check if booth has no more owners and delete it, but for simplicity we keep it or just assume cleanup elsewhere
+    // For this prototype, deleting ownership is enough to remove it from user portfolio.
+
+    revalidatePath("/assets");
+    revalidatePath("/income");
+    revalidatePath("/targets");
+    revalidatePath("/simulation");
+}
+
+export async function updateBoothOwnership(id: string, data: {
+    capitalAmount?: number;
+    revenueSharePct?: number;
+}) {
+    const result = await prisma.boothOwnership.update({
+        where: { id },
+        data
+    });
+    revalidatePath("/assets");
+    revalidatePath("/simulation");
+    revalidatePath("/collaboration");
+    return result;
+}
+
+export async function updateBooth(id: string, data: {
+    name?: string;
+    expectedMonthlyIncome?: number;
+}) {
+    const result = await prisma.booth.update({
+        where: { id },
+        data
+    });
+    revalidatePath("/assets");
+    revalidatePath("/simulation");
+    revalidatePath("/collaboration");
+    return result;
+}

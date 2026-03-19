@@ -8,6 +8,8 @@ import { useStatus } from "@/components/providers/StatusProvider";
 import { deleteTransaction } from "@/actions/transaction";
 import { useRouter } from "next/navigation";
 
+import { EditExpenseDialog } from "./EditExpenseDialog";
+
 interface Expense {
     id: string;
     description: string;
@@ -16,7 +18,7 @@ interface Expense {
     expenseCategory: string | null;
 }
 
-export function ExpenseList({ expenses }: { expenses: Expense[] }) {
+export function ExpenseList({ expenses, categories }: { expenses: Expense[], categories: string[] }) {
   const { showConfirm, showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -68,19 +70,22 @@ export function ExpenseList({ expenses }: { expenses: Expense[] }) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
                 <p className="font-bold text-rose-600 dark:text-rose-400">
                   Rp {formatGroupedNumber(exp.amount)}
                 </p>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-slate-400 hover:text-rose-600 transition-colors h-8 w-8"
-                    onClick={() => handleDelete(exp.id, exp.description)}
-                    disabled={isPending}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <EditExpenseDialog expense={exp} categories={categories} />
+                  <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-slate-400 hover:text-rose-600 transition-colors h-8 w-8"
+                      onClick={() => handleDelete(exp.id, exp.description)}
+                      disabled={isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
