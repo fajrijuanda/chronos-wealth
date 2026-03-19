@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, Suspense } from "react";
 import { StatusModal, StatusType } from "@/components/ui/StatusModal";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
@@ -20,6 +20,39 @@ interface StatusContextType {
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined);
 
+function StatusUrlHandler({ 
+    setIsOpen, 
+    setType, 
+    setMessage, 
+    setTitle 
+}: { 
+    setIsOpen: (v: boolean) => void, 
+    setType: (t: StatusType) => void,
+    setMessage: (v: string | undefined) => void,
+    setTitle: (v: string | undefined) => void
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const ok = searchParams.get("ok");
+    const error = searchParams.get("error");
+
+    if (ok) {
+        setType("success");
+        setMessage(ok);
+        setTitle("Berhasil!");
+        setIsOpen(true);
+    } else if (error) {
+        setType("error");
+        setMessage(error);
+        setTitle("Gagal");
+        setIsOpen(true);
+    }
+  }, [searchParams, setIsOpen, setType, setMessage, setTitle]);
+
+  return null;
+}
+
 export function StatusProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<StatusType>(null);
@@ -31,21 +64,25 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     cancelLabel?: string;
   } | null>(null);
 
-  const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
   const hideStatus = useCallback(() => {
     setIsOpen(false);
     // Clear ok/error from URl after closing
-    const params = new URLSearchParams(searchParams.toString());
+    // Since we need searchParams here, we can't easily move this part unless we move hideStatus
+    // However, hideStatus is only called on user action, so it might be okay?
+    // Actually, in hideStatus, we can construct URLSearchParams from window.location.search if needed, 
+    // or just let it stay if it doesn't trigger the build error.
+    // Let's try to make hideStatus not depend on useSearchParams directly at the top level.
+    const params = new URLSearchParams(window.location.search);
     if (params.has("ok") || params.has("error")) {
         params.delete("ok");
         params.delete("error");
         const query = params.toString();
         router.replace(`${pathname}${query ? `?${query}` : ""}`);
     }
-  }, [searchParams, router, pathname]);
+  }, [router, pathname]);
 
   const showLoading = useCallback((msg?: string, t?: string) => {
     setType("loading");
@@ -86,26 +123,16 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     setIsOpen(true);
   }, []);
 
-  // Sync with URL params
-  useEffect(() => {
-    const ok = searchParams.get("ok");
-    const error = searchParams.get("error");
-
-    if (ok) {
-        setType("success");
-        setMessage(ok);
-        setTitle("Berhasil!");
-        setIsOpen(true);
-    } else if (error) {
-        setType("error");
-        setMessage(error);
-        setTitle("Gagal");
-        setIsOpen(true);
-    }
-  }, [searchParams]);
-
   return (
     <StatusContext.Provider value={{ showLoading, showSuccess, showError, showConfirm, hideStatus }}>
+      <Suspense fallback={null}>
+        <StatusUrlHandler 
+            setIsOpen={setIsOpen} 
+            setType={setType} 
+            setMessage={setMessage} 
+            setTitle={setTitle} 
+        />
+      </Suspense>
       {children}
       <StatusModal
         isOpen={isOpen}
