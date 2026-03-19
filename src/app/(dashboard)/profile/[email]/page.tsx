@@ -97,7 +97,10 @@ export default async function PublicProfilePage({
             {profile.recentConnections.length === 0 ? (
               <p className="text-sm text-muted-foreground">Belum ada koneksi yang ditampilkan.</p>
             ) : (
-              profile.recentConnections.map((item) => (
+              profile.recentConnections.map((item: {
+                id: string;
+                friend: { displayName: string; email: string };
+              }) => (
                 <div key={item.id} className="rounded-2xl border border-border/70 bg-card/50 px-4 py-3">
                   <p className="text-sm font-semibold">{item.friend.displayName}</p>
                   <p className="text-xs text-muted-foreground">{item.friend.email}</p>
@@ -113,7 +116,13 @@ export default async function PublicProfilePage({
             {profile.growthTargets.length === 0 ? (
               <p className="text-sm text-muted-foreground">Belum ada growth target yang dipublikasikan.</p>
             ) : (
-              profile.growthTargets.map((item) => {
+              profile.growthTargets.map((item: {
+                id: string;
+                title: string;
+                currentValue: number;
+                targetValue: number;
+                unit: string;
+              }) => {
                 const pct = item.targetValue > 0 ? Math.min(100, (item.currentValue / item.targetValue) * 100) : 0;
                 return (
                   <div key={item.id} className="rounded-2xl border border-border/70 bg-card/50 px-4 py-3">
@@ -140,7 +149,12 @@ export default async function PublicProfilePage({
       <section className="surface-card p-5">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Box className="h-5 w-5 text-emerald-500" /> Booth Portfolio Snapshot</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {profile.portfolio.slice(0, 9).map((item) => (
+          {profile.portfolio.slice(0, 9).map((item: {
+            ownershipId: string;
+            boothName: string;
+            capitalAmount: number;
+            revenueSharePct: number;
+          }) => (
             <div key={item.ownershipId} className="surface-card-soft p-4">
               <p className="text-sm font-semibold">{item.boothName}</p>
               <p className="mt-1 text-xs text-muted-foreground">Capital: Rp {formatGroupedNumber(item.capitalAmount)}</p>

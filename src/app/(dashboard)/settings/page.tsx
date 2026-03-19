@@ -225,7 +225,11 @@ export default async function SettingsPage({
             {directory.length === 0 ? (
               <p className="text-sm text-muted-foreground">Belum ada user lain yang bisa dihubungkan.</p>
             ) : (
-              directory.map((entry) => (
+              directory.map((entry: {
+                user: { id: string; email: string; displayName: string };
+                relationship: "NONE" | "PENDING_OUT" | "PENDING_IN" | "ACCEPTED" | "REJECTED" | "BLOCKED";
+                friendshipId: string | null;
+              }) => (
                 <div key={entry.user.id} className="rounded-2xl border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <Link href={`/profile/${encodeURIComponent(entry.user.email)}`} className="font-semibold text-foreground hover:underline">
