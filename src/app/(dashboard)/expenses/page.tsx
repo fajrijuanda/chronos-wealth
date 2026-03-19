@@ -1,29 +1,54 @@
-import { getCategoryExpenseWarning } from "@/actions/budget";
+import { getCategoryExpenseWarning, getBudgetLimits } from "@/actions/budget";
+import { getTransactions } from "@/actions/transaction";
 import { AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatGroupedNumber } from "@/lib/number-format";
+import { AddExpenseDialog } from "./AddExpenseDialog";
+import { BudgetSettingsDialog } from "./BudgetSettingsDialog";
+import { ExpenseList } from "./ExpenseList";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExpensesPage() {
-    const lifestyleWarning = await getCategoryExpenseWarning("LIFESTYLE");
-    const foodWarning = await getCategoryExpenseWarning("FOOD");
+    const limits = await getBudgetLimits();
+    const allTransactions = await getTransactions(50);
+    const expenses = allTransactions.filter(tx => tx.type === "EXPENSE");
 
-    const categories = [
-        { name: "Lifestyle", data: lifestyleWarning, icon: "🛍️", color: "bg-pink-500" },
-        { name: "Food & Dining", data: foodWarning, icon: "🍔", color: "bg-orange-500" },
-    ];
+    // Map each budget limit to include current month warning
+    const categoriesWithWarning = await Promise.all(
+        limits.map(async (limit) => ({
+            name: limit.category,
+            data: await getCategoryExpenseWarning(limit.category),
+            icon: limit.category.toUpperCase().includes("FOOD") ? "🍔" : 
+                  limit.category.toUpperCase().includes("LIFESTYLE") ? "🛍️" : "📦",
+            color: limit.category.toUpperCase().includes("FOOD") ? "bg-orange-500" : 
+                   limit.category.toUpperCase().includes("LIFESTYLE") ? "bg-pink-500" : "bg-indigo-500"
+        }))
+    );
+
+    const categoryNames = limits.length > 0 ? limits.map(l => l.category) : ["LIFESTYLE", "FOOD"];
 
     return (
         <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight mb-2">Expenses & Budget</h1>
-                <p className="text-slate-500 dark:text-slate-400">Track your spending limits and active warnings.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">Expenses & Budget</h1>
+                    <p className="text-slate-500 dark:text-slate-400">Track your spending limits and active warnings.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <BudgetSettingsDialog categories={limits} />
+                    <AddExpenseDialog categories={categoryNames} />
+                </div>
             </div>
 
             <div className="space-y-4">
-                {categories.map((cat, i) => {
+                {categoriesWithWarning.length === 0 && (
+                    <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-10 text-center">
+                        <p className="text-slate-500">Belum ada kategori budget. Silakan klik Budget Settings untuk menambah limit.</p>
+                    </div>
+                )}
+                {categoriesWithWarning.map((cat, i) => {
                     const isWarning = cat.data.isWarning;
                     return (
                         <div key={i} className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm transition-all">
@@ -63,6 +88,16 @@ export default async function ExpensesPage() {
                         </div>
                     );
                 })}
+            </div>
+
+            <div className="pt-4 mt-8 pt-8 border-t border-slate-200/50 dark:border-slate-800/50">
+                <ExpenseList expenses={expenses.map(e => ({
+                    id: e.id,
+                    description: e.description,
+                    amount: e.amount,
+                    date: e.date,
+                    expenseCategory: e.expenseCategory
+                }))} />
             </div>
         </div>
     );

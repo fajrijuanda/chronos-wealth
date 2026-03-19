@@ -58,3 +58,29 @@ export async function getDashboardMetrics() {
 
   return { totalBalance, monthlyIncome, monthlyExpense };
 }
+
+export async function updateTransaction(id: string, data: Partial<{
+  amount: number;
+  description: string;
+  expenseCategory: string | null;
+  date: Date;
+}>) {
+  const result = await prisma.transaction.update({
+    where: { id },
+    data,
+  });
+  revalidatePath("/overview");
+  revalidatePath("/expenses");
+  revalidatePath("/income");
+  return result;
+}
+
+export async function deleteTransaction(id: string) {
+  const result = await prisma.transaction.delete({
+    where: { id },
+  });
+  revalidatePath("/overview");
+  revalidatePath("/expenses");
+  revalidatePath("/income");
+  return result;
+}

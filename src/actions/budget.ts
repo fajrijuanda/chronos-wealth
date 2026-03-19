@@ -60,3 +60,11 @@ export async function getCategoryExpenseWarning(category: string) {
     budgetLimit: budget.maxLimit,
   };
 }
+
+export async function deleteBudgetLimit(id: string) {
+  const result = await prisma.budgetLimit.delete({
+    where: { id },
+  });
+  revalidatePath("/expenses");
+  return result;
+}
