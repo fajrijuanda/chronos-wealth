@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Asset and income simulation for long-term wealth planning",
 };
 
+import { StatusProvider } from "@/components/providers/StatusProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <StatusProvider>
+          {children}
+        </StatusProvider>
       </body>
     </html>
   );

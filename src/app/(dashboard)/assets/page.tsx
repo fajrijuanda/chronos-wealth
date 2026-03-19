@@ -1,13 +1,13 @@
 import {
   getCollaborationWorkspace,
-  setSimulationBaseBoothByEmail,
-  setManualBasePrice,
 } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { BoothPackageType } from "@prisma/client";
-import { redirect } from "next/navigation";
-import { Plus } from "lucide-react";
+
+import { ManualPriceForm } from "./ManualPriceForm";
+import { BaseBoothButton } from "./BaseBoothButton";
+import { AddAssetButton } from "./AddAssetButton";
 
 export default async function AssetsPage({
   searchParams,
@@ -20,46 +20,8 @@ export default async function AssetsPage({
   );
 
   const workspace = await getCollaborationWorkspace(activeEmail);
-  const userQuery = `user=${encodeURIComponent(activeEmail)}`;
   const flashOk = typeof sp.ok === "string" ? sp.ok : null;
   const flashError = typeof sp.error === "string" ? sp.error : null;
-
-  async function handleSetBaseBooth(formData: FormData) {
-    "use server";
-
-    const email = String(formData.get("email") ?? "");
-    const boothId = String(formData.get("boothId") ?? "");
-
-    if (!email || !boothId) {
-      redirect(`/assets?${userQuery}&error=${encodeURIComponent("Invalid booth selection")}`);
-    }
-
-    try {
-      const result = await setSimulationBaseBoothByEmail({ email, boothId });
-      redirect(
-        `/assets?${userQuery}&ok=${encodeURIComponent(
-          `Simulation base price set from ${result.selectedBooth.boothName} (Rp ${formatGroupedNumber(result.selectedBooth.basePrice)})`,
-        )}`,
-      );
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unable to set base booth";
-      redirect(`/assets?${userQuery}&error=${encodeURIComponent(message)}`);
-    }
-  }
-
-  async function handleSetManualPrice(formData: FormData) {
-    "use server";
-    const email = String(formData.get("email") ?? "");
-    const price = Number(formData.get("price") ?? 0);
-
-    try {
-      await setManualBasePrice(email, price);
-      redirect(`/assets?${userQuery}&ok=${encodeURIComponent("Manual simulation price updated")}`);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unable to update manual price";
-      redirect(`/assets?${userQuery}&error=${encodeURIComponent(message)}`);
-    }
-  }
 
   return (
     <div className="space-y-8">
@@ -70,10 +32,10 @@ export default async function AssetsPage({
             Pilih booth di portofolio untuk dijadikan harga dasar simulasi pembelian booth berikutnya.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-          <Plus className="w-4 h-4" />
-          Add Asset
-        </button>
+        <AddAssetButton 
+          email={workspace.currentUser.email} 
+          basePrice={workspace.currentUser.boothBasePrice} 
+        />
       </div>
 
       {flashOk && (
@@ -103,25 +65,10 @@ export default async function AssetsPage({
 
         <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-3">Input Manual Price</h2>
-          <form action={handleSetManualPrice} className="space-y-4">
-            <input type="hidden" name="email" value={workspace.currentUser.email} />
-            <div>
-              <label className="block text-sm font-medium mb-1 translate-x-1 text-slate-500">Harga Dasar Manual</label>
-              <input
-                name="price"
-                type="number"
-                defaultValue={workspace.currentUser.boothBasePrice}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20 px-4 py-2"
-                placeholder="7,500,000"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-slate-900 dark:bg-white dark:text-black text-white px-4 py-2 text-sm font-medium hover:bg-slate-800"
-            >
-              Update Manual Price
-            </button>
-          </form>
+          <ManualPriceForm 
+            email={workspace.currentUser.email} 
+            currentPrice={workspace.currentUser.boothBasePrice} 
+          />
         </div>
       </div>
 
@@ -168,16 +115,12 @@ export default async function AssetsPage({
                     <td className="px-6 py-4">Rp {formatGroupedNumber(item.expectedMonthlyIncome)}</td>
                     <td className="px-6 py-4 text-right">
                       {item.packageType !== BoothPackageType.EXCLUSIVE ? (
-                        <form action={handleSetBaseBooth}>
-                          <input type="hidden" name="email" value={workspace.currentUser.email} />
-                          <input type="hidden" name="boothId" value={item.boothId} />
-                          <button
-                            type="submit"
-                            className="rounded-lg px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                          >
-                            Set As Base Price
-                          </button>
-                        </form>
+                        <BaseBoothButton 
+                          email={workspace.currentUser.email} 
+                          boothId={item.boothId} 
+                          boothName={item.boothName} 
+                          price={item.capitalAmount} 
+                        />
                       ) : (
                         <span className="text-xs text-slate-400 italic">Not available as base</span>
                       )}

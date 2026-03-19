@@ -31,8 +31,6 @@ export default async function CollaborationPage({
 
   const workspace = await getCollaborationWorkspace(activeEmail);
   const userQuery = `user=${encodeURIComponent(activeEmail)}`;
-  const flashOk = typeof sp.ok === "string" ? sp.ok : null;
-  const flashError = typeof sp.error === "string" ? sp.error : null;
 
   async function handleAddFriend(formData: FormData) {
     "use server";
@@ -41,16 +39,21 @@ export default async function CollaborationPage({
     const addresseeEmail = String(formData.get("addresseeEmail") ?? "");
     const partnerBasePrice = Number(formData.get("addresseeBoothBasePrice") ?? 0);
 
+    let ok = false;
     try {
       await sendFriendRequestByEmail({
         requesterEmail,
         addresseeEmail,
         addresseeBoothBasePrice: partnerBasePrice > 0 ? partnerBasePrice : undefined,
       });
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Friend request sent")}`);
+      ok = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to send friend request";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (ok) {
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Friend request sent")}`);
     }
   }
 
@@ -64,12 +67,17 @@ export default async function CollaborationPage({
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent("Invalid friendship action")}`);
     }
 
+    let ok = false;
     try {
       await respondFriendRequest(friendshipId, action);
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(`Friend request ${action}ed`)}`);
+      ok = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to update friendship";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (ok) {
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(`Friend request ${action}ed`)}`);
     }
   }
 
@@ -119,6 +127,7 @@ export default async function CollaborationPage({
       }
     }
 
+    let successMsg = "";
     try {
       const result = await createJointBoothProposalByEmail({
         requesterEmail,
@@ -135,15 +144,17 @@ export default async function CollaborationPage({
         notes: notes || undefined,
       });
 
-      const message =
+      successMsg =
         result.mode === "SELF_PURCHASE"
           ? "Booth purchased as fully owned"
           : "Collaboration proposal submitted";
-
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(message)}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to process booth purchase";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (successMsg) {
+       redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(successMsg)}`);
     }
   }
 
@@ -159,6 +170,7 @@ export default async function CollaborationPage({
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent("Invalid proposal action")}`);
     }
 
+    let ok = false;
     try {
       await reviewJointBoothProposal({
         proposalId,
@@ -166,11 +178,14 @@ export default async function CollaborationPage({
         approve: decision === "approve",
         reviewerNote: reviewerNote || undefined,
       });
-
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(`Proposal ${decision}d`)}`);
+      ok = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to review proposal";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (ok) {
+       redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(`Proposal ${decision}d`)}`);
     }
   }
 
@@ -181,16 +196,21 @@ export default async function CollaborationPage({
     const targetBoothEquivalent = Number(formData.get("targetBoothEquivalent") ?? 0);
     const revenuePerBooth = Number(formData.get("revenuePerBooth") ?? 0);
 
+    let ok = false;
     try {
       await setUserTargetByEmail({
         email,
         targetBoothEquivalent,
         revenuePerBooth: revenuePerBooth > 0 ? revenuePerBooth : undefined,
       });
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Target updated")}`);
+      ok = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to update target";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (ok) {
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Target updated")}`);
     }
   }
 
@@ -222,6 +242,7 @@ export default async function CollaborationPage({
         ? BoothPurchaseTiming.END_OF_MONTH
         : BoothPurchaseTiming.START_OF_MONTH;
 
+    let ok = false;
     try {
       await setUserFinanceProfileByEmail({
         email,
@@ -240,10 +261,14 @@ export default async function CollaborationPage({
         purchaseTiming,
         purchaseDayOverride: purchaseDayRaw > 0 ? purchaseDayRaw : null,
       });
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Finance profile updated")}`);
+      ok = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to update finance profile";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (ok) {
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Finance profile updated")}`);
     }
   }
 
@@ -272,6 +297,7 @@ export default async function CollaborationPage({
       ? (categoryRaw as CategoryType)
       : CategoryType.SALARY;
 
+    let ok = false;
     try {
       await createIncomeSourceByEmail({
         ownerEmail,
@@ -282,10 +308,14 @@ export default async function CollaborationPage({
         isRecurring,
         category,
       });
-      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Income schedule saved")}`);
+      ok = true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to save income schedule";
       redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+
+    if (ok) {
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Income schedule saved")}`);
     }
   }
 
@@ -298,19 +328,7 @@ export default async function CollaborationPage({
         </p>
       </div>
 
-      {flashOk && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm">
-          {flashOk}
-        </div>
-      )}
-
-      {flashError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm">
-          {flashError}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Set Personal Booth Target</h2>
           <p className="text-sm text-slate-500 mb-4">
