@@ -1,15 +1,8 @@
-import {
-  getUserConnectionDirectoryByEmail,
-  respondFriendRequest,
-  sendFriendRequestByEmail,
-  updateUserProfileByEmail,
-} from "@/actions/collaboration";
+import Link from "next/link";
+import { Users, Box, Target, ArrowRight, Mail } from "lucide-react";
 import { getActiveUserEmail } from "@/lib/active-user";
-import { redirect } from "next/navigation";
-import { UserRound, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MetricCard } from "@/components/ui/metric-card";
+import { getPublicProfileByEmail } from "@/actions/collaboration";
+import { formatGroupedNumber } from "@/lib/number-format";
 
 export const dynamic = "force-dynamic";
 
@@ -22,227 +15,146 @@ export default async function ProfilePage({
   const activeEmail = await getActiveUserEmail(
     typeof sp.user === "string" ? sp.user : undefined,
   );
-  const tab = typeof sp.tab === "string" && sp.tab === "connect" ? "connect" : "account";
 
-  const { currentUser, directory } = await getUserConnectionDirectoryByEmail(activeEmail);
-
-  async function saveProfile(formData: FormData) {
-    "use server";
-
-    const email = String(formData.get("email") ?? "");
-    const displayName = String(formData.get("displayName") ?? "");
-    const profilePhotoUrl = String(formData.get("profilePhotoUrl") ?? "");
-    const bio = String(formData.get("bio") ?? "");
-
-    await updateUserProfileByEmail({
-      email,
-      displayName,
-      profilePhotoUrl: profilePhotoUrl || null,
-      bio: bio || null,
-    });
-
-    redirect("/profile?tab=account&ok=profile-saved");
-  }
-
-  async function connectUser(formData: FormData) {
-    "use server";
-
-    const requesterEmail = String(formData.get("requesterEmail") ?? "");
-    const addresseeEmail = String(formData.get("addresseeEmail") ?? "");
-
-    await sendFriendRequestByEmail({ requesterEmail, addresseeEmail });
-    redirect("/profile?tab=connect&ok=request-sent");
-  }
-
-  async function respondConnection(formData: FormData) {
-    "use server";
-
-    const friendshipId = String(formData.get("friendshipId") ?? "");
-    const actionRaw = String(formData.get("action") ?? "reject");
-    const action = actionRaw === "accept" ? "accept" : "reject";
-
-    await respondFriendRequest(friendshipId, action);
-    redirect(`/profile?tab=connect&ok=${action === "accept" ? "accepted" : "rejected"}`);
-  }
-
-  const acceptedCount = directory.filter((entry) => entry.relationship === "ACCEPTED").length;
-  const pendingInCount = directory.filter((entry) => entry.relationship === "PENDING_IN").length;
+  const profile = await getPublicProfileByEmail({
+    profileEmail: activeEmail,
+    viewerEmail: activeEmail,
+  });
 
   return (
     <div className="space-y-8 pb-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Profile</h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            Kelola info akun, foto profil, dan koneksi user untuk kebutuhan kolaborasi.
+      <section className="surface-card overflow-hidden p-0">
+        <div className="relative h-32 bg-linear-to-r from-sky-300/45 via-indigo-300/40 to-fuchsia-300/40 dark:from-sky-800/40 dark:via-indigo-800/35 dark:to-fuchsia-800/30" />
+        <div className="px-6 pb-6">
+          <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-end gap-4">
+              {profile.profileUser.profilePhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.profileUser.profilePhotoUrl}
+                  alt={profile.profileUser.displayName}
+                  className="h-20 w-20 rounded-2xl border-4 border-white object-cover shadow-lg dark:border-slate-900"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-linear-to-br from-[#7981e0] to-[#9ca1f2] text-2xl font-bold text-white shadow-lg dark:border-slate-900">
+                  {(profile.profileUser.displayName.trim().charAt(0) || "U").toUpperCase()}
+                </div>
+              )}
+
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">{profile.profileUser.displayName}</h1>
+                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-4 w-4" />
+                  {profile.profileUser.email}
+                </p>
+              </div>
+            </div>
+
+            <Link href="/profile/edit" className="go-chip">
+              Edit My Profile
+            </Link>
+          </div>
+
+          <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            {profile.profileUser.bio || "Belum ada bio. Tambahkan deskripsi singkat tentang fokus finansial Anda dari halaman edit profile."}
           </p>
         </div>
-      </div>
+      </section>
 
-      <div className="inline-flex rounded-2xl border border-white/65 dark:border-white/20 p-1 bg-white/72 dark:bg-slate-900/45 shadow-[0_14px_28px_-22px_rgba(93,101,183,0.95)] backdrop-blur-md">
-        <a
-          href="/profile?tab=account"
-          className={`min-w-24 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === "account"
-              ? "bg-linear-to-r from-primary to-[#8f95ea] text-white shadow-[0_12px_22px_-16px_rgba(102,109,192,0.95)]"
-              : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/8"
-          }`}
-        >
-          Account
-        </a>
-        <a
-          href="/profile?tab=connect"
-          className={`min-w-24 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === "connect"
-              ? "bg-linear-to-r from-primary to-[#8f95ea] text-white shadow-[0_12px_22px_-16px_rgba(102,109,192,0.95)]"
-              : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/8"
-          }`}
-        >
-          Connect
-        </a>
-      </div>
-
-      {tab === "account" ? (
-        <div className="rounded-3xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm max-w-3xl">
-          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-              <UserRound className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h2 className="font-bold text-lg">Account Settings</h2>
-          </div>
-
-          <form action={saveProfile} className="space-y-4">
-            <input type="hidden" name="email" value={currentUser.email} />
-
-            <div className="space-y-2">
-              <label htmlFor="profile-display-name" className="text-sm font-medium">Display Name</label>
-              <input
-                id="profile-display-name"
-                name="displayName"
-                defaultValue={currentUser.displayName}
-                required
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="profile-photo-url" className="text-sm font-medium">Photo URL (Opsional)</label>
-              <input
-                id="profile-photo-url"
-                name="profilePhotoUrl"
-                type="url"
-                defaultValue={currentUser.profilePhotoUrl ?? ""}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="profile-bio" className="text-sm font-medium">Bio (Opsional)</label>
-              <textarea
-                id="profile-bio"
-                name="bio"
-                rows={4}
-                defaultValue={currentUser.bio ?? ""}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-              />
-            </div>
-
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-              Save Profile
-            </Button>
-          </form>
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="surface-card-soft p-4">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Friends</p>
+          <p className="mt-1 text-2xl font-bold">{profile.connectedCount}</p>
         </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <MetricCard
-              size="sm"
-              title="Connected"
-              value={String(acceptedCount)}
-              tone="collab"
-            />
-            <MetricCard
-              size="sm"
-              title="Pending to You"
-              value={String(pendingInCount)}
-              tone="goal"
-            />
-            <MetricCard
-              size="sm"
-              title="Your Email"
-              value={currentUser.email}
-              tone="projection"
-              className="col-span-2 lg:col-span-1"
-            />
+        <div className="surface-card-soft p-4">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Portfolio Booth</p>
+          <p className="mt-1 text-2xl font-bold">{profile.portfolioCount}</p>
+        </div>
+        <div className="surface-card-soft p-4">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Booth Target</p>
+          <p className="mt-1 text-2xl font-bold">{profile.boothTarget.targetBoothEquivalent}</p>
+        </div>
+        <div className="surface-card-soft p-4">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Target Income</p>
+          <p className="mt-1 text-lg font-bold">Rp {formatGroupedNumber(profile.boothTarget.targetIncome)}</p>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="surface-card p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold"><Users className="h-5 w-5 text-indigo-500" /> Recent Connections</h2>
+            <Link href="/settings?tab=connections" className="text-xs font-semibold text-primary hover:underline">Manage</Link>
           </div>
-
-          <div className="rounded-3xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
-            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <h2 className="font-bold text-lg">Connect Users</h2>
-            </div>
-
-            <div className="space-y-3">
-              {directory.length === 0 ? (
-                <p className="text-sm text-slate-500">Belum ada user lain yang bisa dihubungkan.</p>
-              ) : (
-                directory.map((entry) => (
-                  <div key={entry.user.id} className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">{entry.user.displayName}</p>
-                      <p className="text-xs text-slate-500">{entry.user.email}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {entry.relationship === "NONE" ? (
-                        <form action={connectUser}>
-                          <input type="hidden" name="requesterEmail" value={currentUser.email} />
-                          <input type="hidden" name="addresseeEmail" value={entry.user.email} />
-                          <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">Connect</Button>
-                        </form>
-                      ) : null}
-
-                      {entry.relationship === "PENDING_OUT" ? (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending Approval</Badge>
-                      ) : null}
-
-                      {entry.relationship === "PENDING_IN" && entry.friendshipId ? (
-                        <>
-                          <form action={respondConnection}>
-                            <input type="hidden" name="friendshipId" value={entry.friendshipId} />
-                            <input type="hidden" name="action" value="accept" />
-                            <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">Accept</Button>
-                          </form>
-                          <form action={respondConnection}>
-                            <input type="hidden" name="friendshipId" value={entry.friendshipId} />
-                            <input type="hidden" name="action" value="reject" />
-                            <Button type="submit" size="sm" variant="outline" className="text-rose-600 border-rose-200 hover:bg-rose-50">Reject</Button>
-                          </form>
-                        </>
-                      ) : null}
-
-                      {entry.relationship === "ACCEPTED" ? (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Connected</Badge>
-                      ) : null}
-
-                      {entry.relationship === "REJECTED" ? (
-                        <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200">Rejected</Badge>
-                      ) : null}
-
-                      {entry.relationship === "BLOCKED" ? (
-                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">Blocked</Badge>
-                      ) : null}
-                    </div>
+          <div className="space-y-3">
+            {profile.recentConnections.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Belum ada koneksi.</p>
+            ) : (
+              profile.recentConnections.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/profile/${encodeURIComponent(item.friend.email)}`}
+                  className="flex items-center justify-between rounded-2xl border border-border/70 bg-card/50 px-4 py-3 transition-colors hover:bg-card"
+                >
+                  <div>
+                    <p className="text-sm font-semibold">{item.friend.displayName}</p>
+                    <p className="text-xs text-muted-foreground">{item.friend.email}</p>
                   </div>
-                ))
-              )}
-            </div>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                    View <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </Link>
+              ))
+            )}
           </div>
         </div>
-      )}
+
+        <div className="surface-card p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold"><Target className="h-5 w-5 text-amber-500" /> Growth Targets</h2>
+            <Link href="/targets" className="text-xs font-semibold text-primary hover:underline">Open Targets</Link>
+          </div>
+          <div className="space-y-3">
+            {profile.growthTargets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Belum ada growth target tambahan. Tambahkan dari halaman targets.</p>
+            ) : (
+              profile.growthTargets.map((item) => {
+                const pct = item.targetValue > 0 ? Math.min(100, (item.currentValue / item.targetValue) * 100) : 0;
+                return (
+                  <div key={item.id} className="rounded-2xl border border-border/70 bg-card/50 px-4 py-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="text-xs font-bold text-muted-foreground">{pct.toFixed(0)}%</p>
+                    </div>
+                    <progress
+                      value={pct}
+                      max={100}
+                      className="mb-2 h-2 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-slate-200 dark:[&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-linear-to-r [&::-webkit-progress-value]:from-indigo-500 [&::-webkit-progress-value]:to-sky-500 [&::-moz-progress-bar]:bg-linear-to-r [&::-moz-progress-bar]:from-indigo-500 [&::-moz-progress-bar]:to-sky-500"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {formatGroupedNumber(item.currentValue)} / {formatGroupedNumber(item.targetValue)} {item.unit}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-card p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Box className="h-5 w-5 text-emerald-500" /> Booth Portfolio Snapshot</h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {profile.portfolio.slice(0, 6).map((item) => (
+            <div key={item.ownershipId} className="surface-card-soft p-4">
+              <p className="text-sm font-semibold">{item.boothName}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Capital: Rp {formatGroupedNumber(item.capitalAmount)}</p>
+              <p className="text-xs text-muted-foreground">Share: {item.revenueSharePct.toFixed(1)}%</p>
+            </div>
+          ))}
+          {profile.portfolio.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada booth di portofolio.</p> : null}
+        </div>
+      </section>
     </div>
   );
 }

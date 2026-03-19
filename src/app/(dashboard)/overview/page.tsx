@@ -1,9 +1,9 @@
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getDashboardMetrics } from "@/actions/transaction";
+import { prisma } from "@/lib/prisma";
 import { getActiveUserEmail } from "@/lib/active-user";
-import { formatGroupedNumber } from "@/lib/number-format";
-import { Wallet, TrendingDown, Target } from "lucide-react";
-import { MetricCard } from "@/components/ui/metric-card";
+import { FriendshipStatus } from "@prisma/client";
+import { OverviewAnalyticsDeck } from "./OverviewAnalyticsDeck";
 
 export default async function OverviewPage({
     searchParams,
@@ -20,58 +20,73 @@ export default async function OverviewPage({
         getCollaborationWorkspace(activeEmail),
     ]);
 
+    const [activeIncomeCount, growthTargetCount, notificationStats, friendshipStats] = await Promise.all([
+        prisma.incomeSource.count({
+            where: {
+                ownerUserId: workspace.currentUser.id,
+                isActive: true,
+            },
+        }),
+        prisma.userGrowthTarget.count({
+            where: { userId: workspace.currentUser.id },
+        }),
+        prisma.userNotification.aggregate({
+            where: { userId: workspace.currentUser.id },
+            _count: { id: true },
+        }),
+        prisma.friendship.groupBy({
+            by: ["status"],
+            where: {
+                OR: [
+                    { requesterId: workspace.currentUser.id },
+                    { addresseeId: workspace.currentUser.id },
+                ],
+            },
+            _count: { _all: true },
+        }),
+    ]);
+
+    const friendshipsByStatus = new Map(friendshipStats.map((item) => [item.status, item._count._all]));
+    const acceptedFriendCount = friendshipsByStatus.get(FriendshipStatus.ACCEPTED) ?? 0;
+    const pendingFriendCount = friendshipsByStatus.get(FriendshipStatus.PENDING) ?? 0;
+
+    const unreadNotificationCount = await prisma.userNotification.count({
+        where: {
+            userId: workspace.currentUser.id,
+            readAt: null,
+        },
+    });
+
+    const savingsRatePct =
+        metrics.monthlyIncome > 0
+            ? Math.max(0, ((metrics.monthlyIncome - metrics.monthlyExpense) / metrics.monthlyIncome) * 100)
+            : 0;
+
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="font-display text-2xl font-semibold tracking-tight mb-2 md:text-3xl">Dashboard Overview</h1>
-                <p className="text-muted-foreground">Welcome back. Here is your financial summary.</p>
+                <h1 className="mb-2 font-display text-2xl font-semibold tracking-tight md:text-3xl">Business Analytics</h1>
+                <p className="text-muted-foreground">Ringkasan performa finansial, koneksi, target, dan aktivitas akun Anda.</p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                <MetricCard
-                    title="Total Balance"
-                    value={`Rp ${formatGroupedNumber(metrics.totalBalance)}`}
-                    icon={Wallet}
-                    tone="projection"
-                />
-
-                <MetricCard
-                    title="Mo. Income"
-                    value={`Rp ${formatGroupedNumber(metrics.monthlyIncome)}`}
-                    icon={TrendingDown}
-                    tone="income"
-                />
-
-                <MetricCard
-                    title="Mo. Expense"
-                    value={`Rp ${formatGroupedNumber(metrics.monthlyExpense)}`}
-                    icon={TrendingDown}
-                    tone="expense"
-                />
-
-                <MetricCard
-                    title="Active Targets"
-                    value={`${formatGroupedNumber(workspace.targetProgress.targetBoothEquivalent)} Booth Eq.`}
-                    subtitle={`Monthly: Rp ${formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}`}
-                    icon={Target}
-                    tone="goal"
-                />
-            </div>
-
-            {/* Placeholder for Recharts Chart */}
-            <div className="rounded-3xl backdrop-blur-xl bg-card/75 p-6 border border-border/85 shadow-[0_20px_36px_-30px_rgba(96,103,182,0.95)] ring-1 ring-white/60 min-h-100 dark:ring-white/10">
-                <h2 className="font-display text-xl font-semibold text-title mb-6">Cashflow Trend</h2>
-                <div className="flex h-75 items-center justify-center border-2 border-dashed border-border rounded-2xl bg-white/35 dark:bg-white/5">
-                    <div className="text-center text-muted-foreground space-y-1">
-                        <p>
-                            Progress target booth: {workspace.targetProgress.progressPct.toFixed(2)}%
-                        </p>
-                        <p>
-                            Equivalent achieved: {workspace.targetProgress.boothEquivalentAchieved.toFixed(2)} booth
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <OverviewAnalyticsDeck
+                balance={metrics.totalBalance}
+                monthlyIncome={metrics.monthlyIncome}
+                monthlyExpense={metrics.monthlyExpense}
+                savingsRatePct={savingsRatePct}
+                targetBoothEquivalent={workspace.targetProgress.targetBoothEquivalent}
+                boothEquivalentAchieved={workspace.targetProgress.boothEquivalentAchieved}
+                targetProgressPct={workspace.targetProgress.progressPct}
+                monthlyIncomeShare={workspace.targetProgress.monthlyIncomeShare}
+                portfolioCount={workspace.portfolio.length}
+                nonBoothAssetCount={workspace.nonBoothAssets.length}
+                activeIncomeCount={activeIncomeCount}
+                activeGrowthTargetCount={growthTargetCount}
+                acceptedFriendCount={acceptedFriendCount}
+                pendingFriendCount={pendingFriendCount}
+                unreadNotificationCount={unreadNotificationCount}
+                notificationTotalCount={notificationStats._count.id}
+            />
         </div>
     );
 }

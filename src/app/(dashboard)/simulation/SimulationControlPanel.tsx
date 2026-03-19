@@ -19,8 +19,7 @@ type EventFilter =
   | "renewal"
   | "capital_return"
   | "takeover"
-  | "ended"
-  | "pt2_contribution";
+  | "ended";
 
 type CsvDelimiter = "comma" | "semicolon";
 
@@ -37,12 +36,6 @@ type FinanceProfile = {
   purchaseDayOverride?: number | null;
   openingBalance?: number;
   idleCashTarget?: number;
-  holdingCapitalTarget?: number;
-  holdingContributionPct?: number;
-  holdingLaunchDate?: Date;
-  pt2BuildCapitalTarget?: number;
-  pt2ContributionPct?: number;
-  pt2LaunchDate?: Date;
   renewEconomyBoothContracts?: boolean;
   renewExclusiveBoothContracts?: boolean;
 };
@@ -55,10 +48,7 @@ export function SimulationControlPanel(props: {
   initialTargetDate: string;
   initialPartnerEmail: string;
   initialDelimiter: CsvDelimiter;
-  initialIncludePt2Csv: boolean;
   initialEventFilter: EventFilter;
-  initialIncludeHoldingPlan: boolean;
-  initialIncludePt2Plan: boolean;
   acceptedFriends: FriendOption[];
   financeProfile: FinanceProfile | null | undefined;
 }) {
@@ -69,29 +59,17 @@ export function SimulationControlPanel(props: {
     props.initialPartnerEmail || NO_PARTNER_VALUE,
   );
   const [delimiter, setDelimiter] = useState<CsvDelimiter>(props.initialDelimiter);
-  const [includePt2Csv, setIncludePt2Csv] = useState(props.initialIncludePt2Csv ? "yes" : "no");
   const [eventFilter, setEventFilter] = useState<EventFilter>(props.initialEventFilter);
-  const [includeHolding, setIncludeHolding] = useState(props.initialIncludeHoldingPlan);
-  const [includePt2, setIncludePt2] = useState(props.initialIncludePt2Plan);
 
   const applySimulation = () => {
     const params = new URLSearchParams();
 
     params.set("date", date);
     params.set("delimiter", delimiter);
-    params.set("includePt2Csv", includePt2Csv);
     params.set("eventFilter", eventFilter);
 
     if (partnerEmail !== NO_PARTNER_VALUE) {
       params.set("partner", partnerEmail);
-    }
-
-    if (includeHolding) {
-      params.set("includeHolding", "yes");
-    }
-
-    if (includePt2) {
-      params.set("includePt2", "yes");
     }
 
     router.push(`/simulation?${params.toString()}`);
@@ -149,7 +127,7 @@ export function SimulationControlPanel(props: {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="space-y-2">
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest text-slate-400">Format CSV</label>
           <Select value={delimiter} onValueChange={(value) => setDelimiter(value as CsvDelimiter)}>
@@ -159,19 +137,6 @@ export function SimulationControlPanel(props: {
             <SelectContent className="rounded-2xl">
               <SelectItem value="comma" className="rounded-xl">Comma (,)</SelectItem>
               <SelectItem value="semicolon" className="rounded-xl">Semicolon (;)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Include PT2 in CSV</label>
-          <Select value={includePt2Csv} onValueChange={setIncludePt2Csv}>
-            <SelectTrigger className="h-11 w-full rounded-2xl bg-white/70 dark:bg-black/20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="yes" className="rounded-xl">Yes</SelectItem>
-              <SelectItem value="no" className="rounded-xl">No</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -189,29 +154,8 @@ export function SimulationControlPanel(props: {
             <SelectItem value="capital_return" className="rounded-xl">Capital Return</SelectItem>
             <SelectItem value="takeover" className="rounded-xl">Takeover</SelectItem>
             <SelectItem value="ended" className="rounded-xl">Ended</SelectItem>
-            <SelectItem value="pt2_contribution" className="rounded-xl">PT2 Urunan</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="surface-card-soft px-4 py-3 space-y-2">
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Target Plans</p>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={includeHolding}
-            onChange={(event) => setIncludeHolding(event.target.checked)}
-          />
-          Include Holding Capital Plan
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={includePt2}
-            onChange={(event) => setIncludePt2(event.target.checked)}
-          />
-          Include PT 2 Urunan Plan
-        </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

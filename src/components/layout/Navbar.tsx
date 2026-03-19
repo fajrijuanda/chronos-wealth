@@ -1,12 +1,13 @@
-import { Bell, Search, User, Settings } from "lucide-react";
+import { Search, User, Settings } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { getSessionUserEmail } from "@/lib/auth-session";
+import { getUserNotificationsByEmail } from "@/actions/notification";
 import { MobileNav } from "./MobileNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { NavbarSessionInfo } from "./NavbarSessionInfo";
 import { LogoutMenuItem } from "./LogoutMenuItem";
+import { NotificationCenter } from "./NotificationCenter";
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -21,12 +22,16 @@ import { logoutAction } from "@/actions/auth";
 export async function Navbar() {
     const sessionEmail = await getSessionUserEmail();
     const sessionInitial = (sessionEmail?.trim().charAt(0) || "U").toUpperCase();
+    const notifications = sessionEmail ? await getUserNotificationsByEmail(sessionEmail) : [];
 
     return (
-        <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between px-4 md:px-6 backdrop-blur-xl bg-background/68 border-b border-border/80 shadow-[0_10px_25px_-20px_rgba(100,108,186,0.95)]">
-            <div className="flex items-center gap-4 flex-1">
+        <header className="sticky top-0 z-30 grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 md:px-6 backdrop-blur-xl bg-background/68 border-b border-border/80 shadow-[0_10px_25px_-20px_rgba(100,108,186,0.95)]">
+            <div className="flex items-center">
                 <MobileNav sessionEmail={sessionEmail ?? undefined} />
-                <div className="relative w-full max-w-md hidden md:block">
+            </div>
+
+            <div className="hidden md:flex justify-center">
+                <div className="relative w-full max-w-xl">
                     <Search className="absolute ml-3 mt-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
@@ -35,17 +40,11 @@ export async function Navbar() {
                     />
                 </div>
             </div>
-            <div className="flex items-center gap-4">
+
+            <div className="flex items-center justify-end gap-4">
                 <ThemeToggle />
 
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full"
-                >
-                    <Bell className="h-5 w-5 text-muted-foreground" />
-                </Button>
+                <NotificationCenter sessionEmail={sessionEmail ?? ""} initialNotifications={notifications} />
 
                 <NavbarSessionInfo sessionEmail={sessionEmail} />
 
@@ -64,7 +63,7 @@ export async function Navbar() {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                            <Link href="/profile" className="flex items-center">
+                            <Link href="/settings" className="flex items-center">
                                 <Settings className="mr-2 h-4 w-4" />
                                 <span>Settings</span>
                             </Link>

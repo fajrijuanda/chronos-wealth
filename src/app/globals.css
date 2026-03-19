@@ -322,6 +322,16 @@
   gap: 2rem;
 }
 
+.dashboard-main-shell,
+.dashboard-main-content,
+.dashboard-page {
+  transition: width 300ms ease, padding 300ms ease, filter 300ms ease, opacity 260ms ease;
+}
+
+html[data-sidebar-transition="active"] .dashboard-page {
+  animation: dashboard-content-settle 300ms ease;
+}
+
 .dashboard-page > * {
   animation: rise-in 0.5s ease-out both;
 }
@@ -348,6 +358,19 @@
 
 .dashboard-page > * > *:nth-child(5) {
   animation-delay: 320ms;
+}
+
+@keyframes dashboard-content-settle {
+  0% {
+    opacity: 0.94;
+    transform: translateY(3px);
+    filter: saturate(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: saturate(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

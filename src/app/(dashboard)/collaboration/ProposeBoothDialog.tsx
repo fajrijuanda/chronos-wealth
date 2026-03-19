@@ -12,6 +12,13 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { createJointBoothProposalByEmail } from "@/actions/collaboration";
 import { useRouter } from "next/navigation";
@@ -29,6 +36,9 @@ export function ProposeBoothDialog({
     disabled?: boolean,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+    const [partnerEmailValue, setPartnerEmailValue] = useState<string>(friends[0]?.email ?? "");
+    const [packageTypeValue, setPackageTypeValue] = useState<BoothPackageType>(BoothPackageType.ECONOMY);
+    const [selectedBoothTypeValue, setSelectedBoothTypeValue] = useState<BoothSelectionType>(BoothSelectionType.NEW_BOOTH);
   const { showLoading, showSuccess, showError } = useStatus();
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -101,21 +111,25 @@ export function ProposeBoothDialog({
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Basic Info</h4>
                 <div className="space-y-2">
                                         <label htmlFor="proposal-partner-email" className="text-sm font-medium">Partner Kolaborasi</label>
-                    <select
-                                                id="proposal-partner-email"
-                        name="partnerEmail"
-                                                title="Pilih partner kolaborasi"
-                        required
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                    >
-                                            {friends.length > 0 ? (
-                                                friends.map((f) => (
-                                                    <option key={f.email} value={f.email}>{f.name} ({f.email})</option>
-                                                ))
-                                            ) : (
-                                                <option value="" disabled>Tambahkan partner terlebih dahulu</option>
-                                            )}
-                    </select>
+                                        <input type="hidden" name="partnerEmail" value={partnerEmailValue} />
+                                        <Select value={partnerEmailValue} onValueChange={setPartnerEmailValue}>
+                                            <SelectTrigger id="proposal-partner-email" className="w-full">
+                                                <SelectValue placeholder="Pilih partner kolaborasi" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {friends.length > 0 ? (
+                                                    friends.map((f) => (
+                                                        <SelectItem key={f.email} value={f.email}>
+                                                            {f.name} ({f.email})
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <SelectItem value="no-partner" disabled>
+                                                        Tambahkan partner terlebih dahulu
+                                                    </SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
                                         {friends.length === 0 ? (
                                             <p className="text-[11px] text-amber-600 dark:text-amber-400">
                                                 Belum ada partner accepted. Hubungkan user lain dulu di tab Connect.
@@ -193,16 +207,19 @@ export function ProposeBoothDialog({
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Advanced Ops</h4>
                 <div className="space-y-2">
                     <label htmlFor="proposal-package-type" className="text-sm font-medium">Package Type</label>
-                    <select
-                        id="proposal-package-type"
-                        name="packageType"
-                        title="Pilih jenis paket booth"
-                        defaultValue={BoothPackageType.ECONOMY}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                    >
-                        <option value={BoothPackageType.ECONOMY}>Economy (Payout H+1)</option>
-                        <option value={BoothPackageType.EXCLUSIVE}>Exclusive 20jt (Payout OnDate)</option>
-                    </select>
+                                        <input type="hidden" name="packageType" value={packageTypeValue} />
+                                        <Select
+                                            value={packageTypeValue}
+                                            onValueChange={(value) => setPackageTypeValue(value as BoothPackageType)}
+                                        >
+                                            <SelectTrigger id="proposal-package-type" className="w-full">
+                                                <SelectValue placeholder="Pilih jenis paket" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={BoothPackageType.ECONOMY}>Economy (Payout H+1)</SelectItem>
+                                                <SelectItem value={BoothPackageType.EXCLUSIVE}>Exclusive 20jt (Payout OnDate)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                 </div>
                 <div className="space-y-2">
                     <label htmlFor="proposal-mou-signed-at" className="text-sm font-medium">MoU Signing Date</label>
@@ -233,16 +250,19 @@ export function ProposeBoothDialog({
                 </div>
                 <div className="space-y-2">
                     <label htmlFor="proposal-selection-type" className="text-sm font-medium">Booth Selection Type</label>
-                    <select
-                        id="proposal-selection-type"
-                        name="selectedBoothType"
-                        title="Pilih tipe pemilihan booth"
-                        defaultValue={BoothSelectionType.NEW_BOOTH}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                    >
-                        <option value={BoothSelectionType.NEW_BOOTH}>Beli Booth Baru</option>
-                        <option value={BoothSelectionType.EXISTING_BOOTH}>Upgrade / Booth Sudah Ada</option>
-                    </select>
+                                        <input type="hidden" name="selectedBoothType" value={selectedBoothTypeValue} />
+                                        <Select
+                                            value={selectedBoothTypeValue}
+                                            onValueChange={(value) => setSelectedBoothTypeValue(value as BoothSelectionType)}
+                                        >
+                                            <SelectTrigger id="proposal-selection-type" className="w-full">
+                                                <SelectValue placeholder="Pilih tipe pemilihan booth" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={BoothSelectionType.NEW_BOOTH}>Beli Booth Baru</SelectItem>
+                                                <SelectItem value={BoothSelectionType.EXISTING_BOOTH}>Upgrade / Booth Sudah Ada</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                 </div>
             </div>
           </div>

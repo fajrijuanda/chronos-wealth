@@ -12,6 +12,13 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { createIncomeSourceByEmail } from "@/actions/income";
 import { CategoryType } from "@prisma/client";
@@ -19,6 +26,7 @@ import { useRouter } from "next/navigation";
 
 export function AddIncomeDialog({ email }: { email: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [categoryValue, setCategoryValue] = useState<CategoryType>("SALARY");
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -93,16 +101,17 @@ export function AddIncomeDialog({ email }: { email: string }) {
             </div>
             <div className="space-y-2">
                 <label htmlFor="income-category" className="text-sm font-medium">Kategori</label>
-                <select
-                    id="income-category"
-                    name="category"
-                    required
-                className="w-full px-4 py-2"
-                >
-                    <option value="SALARY">Salary</option>
-                    <option value="PROJECT">Project / Freelance</option>
-                    <option value="COMMISSION">Commission</option>
-                </select>
+                <input type="hidden" name="category" value={categoryValue} />
+                <Select value={categoryValue} onValueChange={(value) => setCategoryValue(value as CategoryType)}>
+                  <SelectTrigger id="income-category" className="w-full">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SALARY">Salary</SelectItem>
+                    <SelectItem value="PROJECT">Project / Freelance</SelectItem>
+                    <SelectItem value="COMMISSION">Commission</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
           </div>
           

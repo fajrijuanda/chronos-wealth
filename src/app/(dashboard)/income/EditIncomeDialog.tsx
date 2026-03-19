@@ -12,6 +12,13 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { updateIncomeSource } from "@/actions/income";
 import { CategoryType } from "@prisma/client";
@@ -29,6 +36,7 @@ interface IncomeData {
 
 export function EditIncomeDialog({ income }: { income: IncomeData }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [categoryValue, setCategoryValue] = useState<CategoryType>(income.category);
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -99,19 +107,20 @@ export function EditIncomeDialog({ income }: { income: IncomeData }) {
             </div>
             <div className="space-y-2">
                 <label className="text-sm font-medium">Kategori</label>
-                <select
-                    name="category"
-                    required
-                    defaultValue={income.category}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                >
-                    <option value="SALARY">Salary</option>
-                    <option value="PROJECT">Project / Freelance</option>
-                    <option value="COMMISSION">Commission</option>
-                    <option value="BOOTH">Booth Business</option>
-                    <option value="STOCK">Dividen / Saham</option>
-                    <option value="SAAS">SaaS Business</option>
-                </select>
+                <input type="hidden" name="category" value={categoryValue} />
+                <Select value={categoryValue} onValueChange={(value) => setCategoryValue(value as CategoryType)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SALARY">Salary</SelectItem>
+                    <SelectItem value="PROJECT">Project / Freelance</SelectItem>
+                    <SelectItem value="COMMISSION">Commission</SelectItem>
+                    <SelectItem value="BOOTH">Booth Business</SelectItem>
+                    <SelectItem value="STOCK">Dividen / Saham</SelectItem>
+                    <SelectItem value="SAAS">SaaS Business</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
           </div>
           

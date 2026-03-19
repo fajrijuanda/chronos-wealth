@@ -11,9 +11,18 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { updateTransaction } from "@/actions/transaction";
 import { useRouter } from "next/navigation";
+
+const NO_CATEGORY_VALUE = "__NO_CATEGORY__";
 
 interface Expense {
     id: string;
@@ -25,6 +34,7 @@ interface Expense {
 
 export function EditExpenseDialog({ expense, categories }: { expense: Expense, categories: string[] }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [categoryValue, setCategoryValue] = useState<string>(expense.expenseCategory ?? NO_CATEGORY_VALUE);
   const { showLoading, showSuccess, showError } = useStatus();
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -100,16 +110,24 @@ export function EditExpenseDialog({ expense, categories }: { expense: Expense, c
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Kategori</label>
-            <select
-                name="category"
-                defaultValue={expense.expenseCategory ?? ""}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2 appearance-none"
-            >
-                <option value="" disabled>Pilih Kategori</option>
-                {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+            <input
+              type="hidden"
+              name="category"
+              value={categoryValue === NO_CATEGORY_VALUE ? "" : categoryValue}
+            />
+            <Select value={categoryValue} onValueChange={setCategoryValue}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Pilih kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CATEGORY_VALUE}>Tanpa Kategori</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
                 ))}
-            </select>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>

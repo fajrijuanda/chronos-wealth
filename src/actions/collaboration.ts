@@ -8,10 +8,13 @@ import {
   BoothSelectionType,
   CategoryType,
   FriendshipStatus,
+  NotificationPriority,
+  NotificationType,
   ProposalStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { createUserNotification } from "@/actions/notification";
 
 type CreateJointBoothProposalInput = {
   requesterId: string;
@@ -232,6 +235,19 @@ export async function sendFriendRequest(requesterId: string, addresseeId: string
     },
   });
 
+  const requester = await prisma.appUser.findUnique({ where: { id: requesterId } });
+  if (requester) {
+    await createUserNotification({
+      userId: addresseeId,
+      type: NotificationType.SOCIAL,
+      priority: NotificationPriority.MEDIUM,
+      title: "Permintaan koneksi baru",
+      body: `${requester.displayName} mengirimkan permintaan koneksi kepada Anda.`,
+      href: "/settings?tab=connections",
+      metadata: { requesterEmail: requester.email, friendshipId: result.id },
+    });
+  }
+
   revalidatePath("/income");
   return result;
 }
@@ -246,6 +262,23 @@ export async function respondFriendRequest(
   const result = await prisma.friendship.update({
     where: { id: friendshipId },
     data: { status },
+    include: {
+      requester: true,
+      addressee: true,
+    },
+  });
+
+  await createUserNotification({
+    userId: result.requesterId,
+    type: NotificationType.SOCIAL,
+    priority: action === "accept" ? NotificationPriority.HIGH : NotificationPriority.LOW,
+    title: action === "accept" ? "Permintaan koneksi diterima" : "Permintaan koneksi ditolak",
+    body:
+      action === "accept"
+        ? `${result.addressee.displayName} menerima permintaan koneksi Anda.`
+        : `${result.addressee.displayName} menolak permintaan koneksi Anda.`,
+    href: "/settings?tab=connections",
+    metadata: { friendshipId: result.id, action },
   });
 
   revalidatePath("/income");
@@ -291,6 +324,20 @@ export async function createJointBoothProposal(
     include: {
       requester: true,
       partner: true,
+    },
+  });
+
+  await createUserNotification({
+    userId: input.partnerId,
+    type: NotificationType.COLLABORATION,
+    priority: NotificationPriority.HIGH,
+    title: "Proposal booth baru",
+    body: `${proposal.requester.displayName} mengirim proposal untuk booth ${proposal.boothName}.`,
+    href: "/collaboration",
+    metadata: {
+      proposalId: proposal.id,
+      boothName: proposal.boothName,
+      requesterEmail: proposal.requester.email,
     },
   });
 
@@ -447,6 +494,17 @@ export async function reviewJointBoothProposal(input: {
         reviewerNote: input.reviewerNote,
       },
     });
+
+    await createUserNotification({
+      userId: proposal.requesterId,
+      type: NotificationType.COLLABORATION,
+      priority: NotificationPriority.MEDIUM,
+      title: "Proposal booth ditolak",
+      body: `Proposal ${proposal.boothName} ditolak oleh partner Anda.`,
+      href: "/collaboration",
+      metadata: { proposalId: proposal.id, status: "REJECTED" },
+    });
+
     revalidatePath("/income");
     return rejected;
   }
@@ -528,6 +586,16 @@ export async function reviewJointBoothProposal(input: {
         createdBooth: true,
       },
     });
+  });
+
+  await createUserNotification({
+    userId: proposal.requesterId,
+    type: NotificationType.COLLABORATION,
+    priority: NotificationPriority.HIGH,
+    title: "Proposal booth disetujui",
+    body: `Proposal ${proposal.boothName} telah disetujui dan booth sudah dibuat.`,
+    href: "/assets",
+    metadata: { proposalId: proposal.id, status: "APPROVED", boothName: proposal.boothName },
   });
 
   revalidatePath("/income");
@@ -742,12 +810,6 @@ export async function upsertUserFinanceProfile(data: {
   purchaseDayOverride?: number | null;
   openingBalance?: number;
   idleCashTarget?: number;
-  holdingCapitalTarget?: number;
-  holdingContributionPct?: number;
-  holdingLaunchDate?: Date;
-  pt2BuildCapitalTarget?: number;
-  pt2ContributionPct?: number;
-  pt2LaunchDate?: Date;
   renewEconomyBoothContracts?: boolean;
   renewExclusiveBoothContracts?: boolean;
 }) {
@@ -768,23 +830,9 @@ export async function upsertUserFinanceProfile(data: {
   }
 
   const idleCashTarget = data.idleCashTarget ?? 1_000_000_000;
-  const holdingCapitalTarget = data.holdingCapitalTarget ?? 1_500_000_000;
-  const holdingContributionPct = data.holdingContributionPct ?? 50;
-  const holdingLaunchDate = data.holdingLaunchDate ?? new Date("2028-07-01");
-  const pt2BuildCapitalTarget = data.pt2BuildCapitalTarget ?? 8_000_000_000;
-  const pt2ContributionPct = data.pt2ContributionPct ?? 50;
-  const pt2LaunchDate = data.pt2LaunchDate ?? new Date("2030-01-01");
 
-  if (idleCashTarget < 0 || holdingCapitalTarget < 0 || pt2BuildCapitalTarget < 0) {
+  if (idleCashTarget < 0) {
     throw new Error("Strategic target values must be zero or positive");
-  }
-
-  if (holdingContributionPct < 0 || holdingContributionPct > 100) {
-    throw new Error("holdingContributionPct must be between 0 and 100");
-  }
-
-  if (pt2ContributionPct < 0 || pt2ContributionPct > 100) {
-    throw new Error("pt2ContributionPct must be between 0 and 100");
   }
 
   const result = await prisma.userFinanceProfile.upsert({
@@ -796,12 +844,6 @@ export async function upsertUserFinanceProfile(data: {
       purchaseDayOverride: data.purchaseDayOverride ?? null,
       openingBalance: data.openingBalance ?? 0,
       idleCashTarget,
-      holdingCapitalTarget,
-      holdingContributionPct,
-      holdingLaunchDate,
-      pt2BuildCapitalTarget,
-      pt2ContributionPct,
-      pt2LaunchDate,
       renewEconomyBoothContracts: data.renewEconomyBoothContracts ?? true,
       renewExclusiveBoothContracts: data.renewExclusiveBoothContracts ?? true,
     },
@@ -813,12 +855,6 @@ export async function upsertUserFinanceProfile(data: {
       purchaseDayOverride: data.purchaseDayOverride ?? null,
       openingBalance: data.openingBalance ?? 0,
       idleCashTarget,
-      holdingCapitalTarget,
-      holdingContributionPct,
-      holdingLaunchDate,
-      pt2BuildCapitalTarget,
-      pt2ContributionPct,
-      pt2LaunchDate,
       renewEconomyBoothContracts: data.renewEconomyBoothContracts ?? true,
       renewExclusiveBoothContracts: data.renewExclusiveBoothContracts ?? true,
     },
@@ -909,6 +945,116 @@ export async function getCollaborationWorkspace(email: string) {
     nonBoothAssets,
     targetProgress,
     financeProfile,
+  };
+}
+
+export async function getSidebarProfileSummary(email: string) {
+  const currentUser = await ensureAppUserByEmail({ email });
+
+  const [friendsCount, pendingIncomingCount] = await Promise.all([
+    prisma.friendship.count({
+      where: {
+        status: FriendshipStatus.ACCEPTED,
+        OR: [{ requesterId: currentUser.id }, { addresseeId: currentUser.id }],
+      },
+    }),
+    prisma.friendship.count({
+      where: {
+        status: FriendshipStatus.PENDING,
+        addresseeId: currentUser.id,
+      },
+    }),
+  ]);
+
+  return {
+    userId: currentUser.id,
+    email: currentUser.email,
+    displayName: currentUser.displayName,
+    profilePhotoUrl: currentUser.profilePhotoUrl,
+    friendsCount,
+    pendingIncomingCount,
+  };
+}
+
+export async function getPublicProfileByEmail(input: {
+  profileEmail: string;
+  viewerEmail?: string;
+}) {
+  const profileEmail = input.profileEmail.trim().toLowerCase();
+  const profileUser = await prisma.appUser.findUnique({ where: { email: profileEmail } });
+  if (!profileUser) {
+    throw new Error("User profile not found");
+  }
+
+  const [portfolio, boothTarget, growthTargets, friendships] = await Promise.all([
+    getUserBoothPortfolio(profileUser.id),
+    getUserBoothTargetProgress(profileUser.id),
+    prisma.userGrowthTarget.findMany({ where: { userId: profileUser.id }, orderBy: { createdAt: "desc" }, take: 6 }),
+    prisma.friendship.findMany({
+      where: {
+        OR: [{ requesterId: profileUser.id }, { addresseeId: profileUser.id }],
+      },
+      include: {
+        requester: true,
+        addressee: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    }),
+  ]);
+
+  let relationship: "SELF" | "NONE" | "PENDING_IN" | "PENDING_OUT" | "ACCEPTED" | "REJECTED" | "BLOCKED" = "NONE";
+
+  if (input.viewerEmail) {
+    const viewer = await prisma.appUser.findUnique({
+      where: { email: input.viewerEmail.trim().toLowerCase() },
+    });
+
+    if (viewer?.id === profileUser.id) {
+      relationship = "SELF";
+    } else if (viewer) {
+      const friendship = await prisma.friendship.findFirst({
+        where: {
+          OR: [
+            { requesterId: viewer.id, addresseeId: profileUser.id },
+            { requesterId: profileUser.id, addresseeId: viewer.id },
+          ],
+        },
+      });
+
+      if (!friendship) {
+        relationship = "NONE";
+      } else if (friendship.status === FriendshipStatus.PENDING) {
+        relationship = friendship.requesterId === viewer.id ? "PENDING_OUT" : "PENDING_IN";
+      } else {
+        relationship = friendship.status;
+      }
+    }
+  }
+
+  const connectedCount = await prisma.friendship.count({
+    where: {
+      status: FriendshipStatus.ACCEPTED,
+      OR: [{ requesterId: profileUser.id }, { addresseeId: profileUser.id }],
+    },
+  });
+
+  return {
+    profileUser,
+    boothTarget,
+    growthTargets,
+    connectedCount,
+    portfolioCount: portfolio.length,
+    portfolio,
+    recentConnections: friendships.map((item) => ({
+      id: item.id,
+      status: item.status,
+      friend:
+        item.requesterId === profileUser.id
+          ? item.addressee
+          : item.requester,
+    })),
+    relationship,
   };
 }
 
@@ -1012,12 +1158,6 @@ export async function setUserFinanceProfileByEmail(input: {
   purchaseDayOverride?: number | null;
   openingBalance?: number;
   idleCashTarget?: number;
-  holdingCapitalTarget?: number;
-  holdingContributionPct?: number;
-  holdingLaunchDate?: Date;
-  pt2BuildCapitalTarget?: number;
-  pt2ContributionPct?: number;
-  pt2LaunchDate?: Date;
   renewEconomyBoothContracts?: boolean;
   renewExclusiveBoothContracts?: boolean;
 }) {
@@ -1030,12 +1170,6 @@ export async function setUserFinanceProfileByEmail(input: {
     purchaseDayOverride: input.purchaseDayOverride,
     openingBalance: input.openingBalance,
     idleCashTarget: input.idleCashTarget,
-    holdingCapitalTarget: input.holdingCapitalTarget,
-    holdingContributionPct: input.holdingContributionPct,
-    holdingLaunchDate: input.holdingLaunchDate,
-    pt2BuildCapitalTarget: input.pt2BuildCapitalTarget,
-    pt2ContributionPct: input.pt2ContributionPct,
-    pt2LaunchDate: input.pt2LaunchDate,
     renewEconomyBoothContracts: input.renewEconomyBoothContracts,
     renewExclusiveBoothContracts: input.renewExclusiveBoothContracts,
   });

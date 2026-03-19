@@ -14,7 +14,8 @@ import {
   Target, 
   LineChart, 
   Handshake,
-  UserCircle2
+  UserCircle2,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const links = [
   { name: "Collaboration", href: "/collaboration", icon: Handshake },
   { name: "Profile", href: "/profile", icon: UserCircle2 },
   { name: "Simulation", href: "/simulation", icon: LineChart },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function MobileNav({ sessionEmail }: { sessionEmail?: string }) {

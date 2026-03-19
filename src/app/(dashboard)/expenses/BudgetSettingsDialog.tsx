@@ -12,6 +12,13 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { setBudgetLimit } from "@/actions/budget";
 import { useRouter } from "next/navigation";
@@ -20,6 +27,7 @@ export function BudgetSettingsDialog({ categories }: {
     categories: { category: string, maxLimit: number, warningThreshold: number }[] 
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [categoryValue, setCategoryValue] = useState<string>(categories[0]?.category ?? "");
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -65,17 +73,19 @@ export function BudgetSettingsDialog({ categories }: {
         <form action={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Kategori</label>
-            <select
-                name="category"
-                required
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-            >
+            <input type="hidden" name="category" value={categoryValue} />
+            <Select value={categoryValue} onValueChange={setCategoryValue}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Pilih kategori" />
+              </SelectTrigger>
+              <SelectContent>
                 {categories.map((c) => (
-                    <option key={c.category} value={c.category}>
-                        {c.category}
-                    </option>
+                  <SelectItem key={c.category} value={c.category}>
+                    {c.category}
+                  </SelectItem>
                 ))}
-            </select>
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

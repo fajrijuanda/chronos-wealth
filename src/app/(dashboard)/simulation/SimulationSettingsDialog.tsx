@@ -12,6 +12,13 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import { setUserFinanceProfileByEmail } from "@/actions/collaboration";
 import { useRouter } from "next/navigation";
@@ -24,12 +31,6 @@ interface FinanceProfile {
     purchaseDayOverride?: number | null;
     openingBalance?: number;
     idleCashTarget?: number;
-    holdingCapitalTarget?: number;
-    holdingContributionPct?: number;
-    holdingLaunchDate?: Date;
-    pt2BuildCapitalTarget?: number;
-    pt2ContributionPct?: number;
-    pt2LaunchDate?: Date;
     renewEconomyBoothContracts?: boolean;
     renewExclusiveBoothContracts?: boolean;
 }
@@ -42,6 +43,9 @@ export function SimulationSettingsDialog({
     profile?: FinanceProfile | null 
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [purchaseTimingValue, setPurchaseTimingValue] = useState<BoothPurchaseTiming>(
+    profile?.purchaseTiming ?? "END_OF_MONTH",
+  );
   const { showLoading, showSuccess, showError } = useStatus();
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -55,12 +59,6 @@ export function SimulationSettingsDialog({
         purchaseDayOverride: formData.get("purchaseDayOverride") ? Number(formData.get("purchaseDayOverride")) : null,
         openingBalance: Number(formData.get("openingBalance") ?? 0),
         idleCashTarget: Number(formData.get("idleCashTarget") ?? 1000000000),
-        holdingCapitalTarget: Number(formData.get("holdingCapitalTarget") ?? 1500000000),
-        holdingContributionPct: Number(formData.get("holdingContributionPct") ?? 50),
-        holdingLaunchDate: formData.get("holdingLaunchDate") ? new Date(formData.get("holdingLaunchDate") as string) : undefined,
-        pt2BuildCapitalTarget: Number(formData.get("pt2BuildCapitalTarget") ?? 8000000000),
-        pt2ContributionPct: Number(formData.get("pt2ContributionPct") ?? 50),
-        pt2LaunchDate: formData.get("pt2LaunchDate") ? new Date(formData.get("pt2LaunchDate") as string) : undefined,
         renewEconomyBoothContracts: formData.get("renewEconomyBoothContracts") === "on",
         renewExclusiveBoothContracts: formData.get("renewExclusiveBoothContracts") === "on",
     };
@@ -123,15 +121,19 @@ export function SimulationSettingsDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="sim-purchase-timing" className="text-sm font-medium">Purchase Timing</label>
-                <select
-                id="sim-purchase-timing"
-                    name="purchaseTiming"
-                    defaultValue={profile?.purchaseTiming ?? "END_OF_MONTH"}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                <input type="hidden" name="purchaseTiming" value={purchaseTimingValue} />
+                <Select
+                  value={purchaseTimingValue}
+                  onValueChange={(value) => setPurchaseTimingValue(value as BoothPurchaseTiming)}
                 >
-                    <option value="START_OF_MONTH">Awal Bulan</option>
-                    <option value="END_OF_MONTH">Akhir Bulan</option>
-                </select>
+                  <SelectTrigger id="sim-purchase-timing" className="w-full">
+                    <SelectValue placeholder="Pilih timing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="START_OF_MONTH">Awal Bulan</SelectItem>
+                    <SelectItem value="END_OF_MONTH">Akhir Bulan</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
             <div className="space-y-2">
                 <label className="text-sm font-medium">Purchase Day Override (1-31)</label>

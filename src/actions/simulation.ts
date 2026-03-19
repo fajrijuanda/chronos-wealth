@@ -40,8 +40,7 @@ type ContractEventType =
   | "capital_return"
   | "renewal"
   | "takeover"
-  | "ended"
-  | "pt2_contribution";
+  | "ended";
 
 type ContractEvent = {
   day: number;
@@ -84,10 +83,6 @@ function getContractEventType(label: string): ContractEventType | null {
 
   if (/contract ended/i.test(label)) {
     return "ended";
-  }
-
-  if (/pt 2 urunan|pt2 urunan/i.test(label)) {
-    return "pt2_contribution";
   }
 
   return null;
@@ -209,8 +204,6 @@ export async function calculateSimulation(
 async function simulateUserBoothPlan(input: {
   targetDate: Date;
   simUser: SimUserInput;
-  includeHoldingPlan?: boolean;
-  includePt2Plan?: boolean;
 }) {
   const user = await ensureAppUserByEmail({
     email: input.simUser.email,
@@ -260,37 +253,23 @@ async function simulateUserBoothPlan(input: {
 
   let boothEquivalentOwned = existingEquivalent;
   let simulatedEquivalentAdded = 0;
-  let holdingFundAccumulated = 0;
-  let pt2FundAccumulated = 0;
+  const holdingFundAccumulated = 0;
+  const pt2FundAccumulated = 0;
 
-  const includeHoldingPlan = input.includeHoldingPlan ?? false;
-  const includePt2Plan = input.includePt2Plan ?? false;
+  const includeHoldingPlan = false;
+  const includePt2Plan = false;
 
   const idleCashTarget = financeProfile?.idleCashTarget ?? 1_000_000_000;
-  const holdingCapitalTarget = includeHoldingPlan
-    ? (financeProfile?.holdingCapitalTarget ?? 0)
-    : 0;
-  const holdingContributionPct = includeHoldingPlan
-    ? (financeProfile?.holdingContributionPct ?? 0)
-    : 0;
-  const holdingLaunchDate = financeProfile?.holdingLaunchDate ?? new Date();
-  const pt2BuildCapitalTarget = includePt2Plan
-    ? (financeProfile?.pt2BuildCapitalTarget ?? 0)
-    : 0;
-  const pt2ContributionPct = includePt2Plan
-    ? (financeProfile?.pt2ContributionPct ?? 0)
-    : 0;
-  const pt2LaunchDate = financeProfile?.pt2LaunchDate ?? new Date();
+  const holdingLaunchDate = new Date();
+  const pt2LaunchDate = new Date();
   const renewEconomyBoothContracts = financeProfile?.renewEconomyBoothContracts ?? true;
   const renewExclusiveBoothContracts =
     financeProfile?.renewExclusiveBoothContracts ?? true;
 
   const exclusiveExtraUnitsByOwnershipId = new Map<string, number>();
 
-  const personalHoldingTarget =
-    holdingCapitalTarget * (holdingContributionPct / 100);
-  const personalPt2Target =
-    pt2BuildCapitalTarget * (pt2ContributionPct / 100);
+  const personalHoldingTarget = 0;
+  const personalPt2Target = 0;
 
   const plans: Array<{
     month: string;
@@ -489,7 +468,7 @@ async function simulateUserBoothPlan(input: {
       .reduce((acc, event) => acc + event.amount, 0);
 
     const totalMonthEventsIncome = events.reduce((acc, event) => acc + event.amount, 0);
-    let contractEvents = events
+    const contractEvents = events
       .map((event) => {
         const eventType = getContractEventType(event.label);
         if (!eventType) {
@@ -506,43 +485,13 @@ async function simulateUserBoothPlan(input: {
       .filter((event): event is ContractEvent => event !== null);
     const incomeAfterPurchase = totalMonthEventsIncome - incomeBeforePurchase;
 
-    const launchMonthDiff = differenceInMonths(
-      startOfMonth(holdingLaunchDate),
-      startOfMonth(monthDate),
-    );
-
-    const shouldAllocateHolding =
-      launchMonthDiff >= 0 && holdingFundAccumulated < personalHoldingTarget;
-    const remainingMonthsForHolding = shouldAllocateHolding ? launchMonthDiff + 1 : 0;
-    const remainingHoldingNeed = Math.max(0, personalHoldingTarget - holdingFundAccumulated);
-
-    const plannedHoldingAllocation =
-      remainingMonthsForHolding > 0
-        ? remainingHoldingNeed / remainingMonthsForHolding
-        : 0;
-
-    const pt2LaunchMonthDiff = differenceInMonths(
-      startOfMonth(pt2LaunchDate),
-      startOfMonth(monthDate),
-    );
-
-    const shouldAllocatePt2 =
-      pt2LaunchMonthDiff >= 0 && pt2FundAccumulated < personalPt2Target;
-    const remainingMonthsForPt2 = shouldAllocatePt2 ? pt2LaunchMonthDiff + 1 : 0;
-    const remainingPt2Need = Math.max(0, personalPt2Target - pt2FundAccumulated);
-
-    const plannedPt2Allocation =
-      remainingMonthsForPt2 > 0
-        ? remainingPt2Need / remainingMonthsForPt2
-        : 0;
-
     cash += incomeBeforePurchase;
     const cashBeforePurchase = cash;
 
     const reserveGuard = idleCashTarget;
     const safeCashForBooth = Math.max(
       0,
-      cashBeforePurchase - monthlyExpense - reserveGuard - plannedHoldingAllocation - plannedPt2Allocation,
+      cashBeforePurchase - monthlyExpense - reserveGuard,
     );
     const remainingBoothNeed = Math.max(
       0,
@@ -557,33 +506,8 @@ async function simulateUserBoothPlan(input: {
 
     cash -= capitalUsed;
 
-    const actualHoldingSaved = Math.min(
-      plannedHoldingAllocation,
-      Math.max(0, cash - monthlyExpense - reserveGuard),
-    );
-
-    cash -= actualHoldingSaved;
-    holdingFundAccumulated += actualHoldingSaved;
-
-    const actualPt2Saved = Math.min(
-      plannedPt2Allocation,
-      Math.max(0, cash - monthlyExpense - reserveGuard),
-    );
-
-    cash -= actualPt2Saved;
-    pt2FundAccumulated += actualPt2Saved;
-
-    if (actualPt2Saved > 0) {
-      contractEvents = [
-        ...contractEvents,
-        {
-          day: purchaseDay,
-          amount: -actualPt2Saved,
-          label: "PT 2 urunan contribution",
-          type: "pt2_contribution",
-        },
-      ];
-    }
+    const actualHoldingSaved = 0;
+    const actualPt2Saved = 0;
 
     cash += incomeAfterPurchase;
     cash -= monthlyExpense;
@@ -639,14 +563,10 @@ export async function simulateCollaborativeGrowth(input: {
   targetDate: Date;
   primaryEmail: string;
   partnerEmail: string;
-  includeHoldingPlan?: boolean;
-  includePt2Plan?: boolean;
 }) {
   const [primary, partner] = await Promise.all([
     simulateUserBoothPlan({
       targetDate: input.targetDate,
-      includeHoldingPlan: input.includeHoldingPlan,
-      includePt2Plan: input.includePt2Plan,
       simUser: {
         email: input.primaryEmail,
         fallbackBoothPrice: 7_500_000,
@@ -659,8 +579,6 @@ export async function simulateCollaborativeGrowth(input: {
     }),
     simulateUserBoothPlan({
       targetDate: input.targetDate,
-      includeHoldingPlan: input.includeHoldingPlan,
-      includePt2Plan: input.includePt2Plan,
       simUser: {
         email: input.partnerEmail,
         fallbackBoothPrice: 9_500_000,
@@ -691,13 +609,9 @@ export async function simulateCollaborativeGrowth(input: {
 export async function simulateSingleUserGrowth(input: {
   targetDate: Date;
   email: string;
-  includeHoldingPlan?: boolean;
-  includePt2Plan?: boolean;
 }) {
   const primary = await simulateUserBoothPlan({
     targetDate: input.targetDate,
-    includeHoldingPlan: input.includeHoldingPlan,
-    includePt2Plan: input.includePt2Plan,
     simUser: {
       email: input.email,
       fallbackBoothPrice: 7_500_000,

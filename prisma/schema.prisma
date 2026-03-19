@@ -41,6 +41,8 @@ model AppUser {
   nonBoothAssets  UserAsset[]          @relation("UserNonBoothAssets")
   boothTarget     UserBoothTarget?
   financeProfile  UserFinanceProfile?
+  growthTargets   UserGrowthTarget[]
+  notifications   UserNotification[]
 }
 
 model UserAsset {
@@ -68,16 +70,43 @@ model UserFinanceProfile {
   openingBalance               Float               @default(0)
   createdAt                    DateTime            @default(now())
   updatedAt                    DateTime            @updatedAt
-  holdingCapitalTarget         Float               @default(1500000000)
-  holdingContributionPct       Float               @default(50)
-  holdingLaunchDate            DateTime            @default(dbgenerated("'2028-07-01 00:00:00'::timestamp without time zone"))
   idleCashTarget               Float               @default(1000000000)
   renewEconomyBoothContracts   Boolean             @default(true)
-  pt2BuildCapitalTarget        Float               @default(8000000000)
-  pt2ContributionPct           Float               @default(50)
-  pt2LaunchDate                DateTime            @default(dbgenerated("'2030-01-01 00:00:00'::timestamp without time zone"))
   renewExclusiveBoothContracts Boolean             @default(true)
   user                         AppUser             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserGrowthTarget {
+  id          String           @id @default(cuid())
+  userId      String
+  kind        GrowthTargetKind
+  title       String
+  targetValue Float
+  currentValue Float           @default(0)
+  unit        String
+  note        String?
+  deadline    DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        AppUser          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+}
+
+model UserNotification {
+  id          String               @id @default(cuid())
+  userId      String
+  type        NotificationType
+  priority    NotificationPriority @default(MEDIUM)
+  title       String
+  body        String
+  href        String?
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
+  metadata    Json?
+  user        AppUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model Friendship {
@@ -254,4 +283,23 @@ enum AssetType {
   GOLD
   PROPERTY
   OTHER
+}
+
+enum GrowthTargetKind {
+  ACCOUNT_COUNT
+  CAPITAL_POOL
+  CUSTOM
+}
+
+enum NotificationType {
+  SYSTEM
+  FINANCE
+  COLLABORATION
+  SOCIAL
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
 }

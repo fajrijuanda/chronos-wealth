@@ -3,10 +3,13 @@ import { getActiveUserEmail } from "@/lib/active-user";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate } from "@/lib/date-format";
 import { getSavingGoals } from "@/actions/saving";
+import { getGrowthTargetsByEmail } from "@/actions/growth-target";
 import { Target, TrendingUp, Wallet2 } from "lucide-react";
 import { AddSavingGoalDialog } from "./AddSavingGoalDialog";
 import { GoalCardActions } from "./GoalCardActions";
 import { EditBoothTargetDialog } from "./EditBoothTargetDialog";
+import { AddGrowthTargetDialog } from "./AddGrowthTargetDialog";
+import { GrowthTargetCardActions } from "./GrowthTargetCardActions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +23,11 @@ export default async function TargetsPage({
         typeof sp.user === "string" ? sp.user : undefined,
     );
 
-    const goals = await getSavingGoals();
-    const workspace = await getCollaborationWorkspace(activeEmail);
+        const [goals, workspace, growthTargets] = await Promise.all([
+            getSavingGoals(),
+            getCollaborationWorkspace(activeEmail),
+            getGrowthTargetsByEmail(activeEmail),
+        ]);
 
     return (
         <div className="space-y-8">
@@ -30,8 +36,70 @@ export default async function TargetsPage({
                     <h1 className="text-3xl font-bold tracking-tight mb-2">Saving Goals</h1>
                     <p className="text-slate-500 dark:text-slate-400">Punya target besar? Alokasikan dana untuk masa depan Anda di sini.</p>
                 </div>
-                <AddSavingGoalDialog />
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <AddGrowthTargetDialog email={activeEmail} />
+                                    <AddSavingGoalDialog />
+                                </div>
             </div>
+
+                        <div className="surface-card p-6 space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Growth Targets (Non-Booth)</h2>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Target tambahan seperti jumlah rekening, modal terkumpul, atau KPI custom.</p>
+                                </div>
+                            </div>
+
+                            {growthTargets.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-5 text-sm text-slate-500 dark:text-slate-400">
+                                    Belum ada growth target tambahan. Klik New Growth Target untuk membuat target pertama.
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {growthTargets.map((item) => {
+                                        const pct = item.targetValue > 0 ? Math.min(100, (item.currentValue / item.targetValue) * 100) : 0;
+                                        return (
+                                            <div key={item.id} className="surface-card-soft p-4 space-y-3">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{item.kind.replaceAll("_", " ")}</p>
+                                                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">{item.title}</h3>
+                                                    </div>
+                                                    <GrowthTargetCardActions
+                                                        target={{
+                                                            id: item.id,
+                                                            title: item.title,
+                                                            targetValue: item.targetValue,
+                                                            currentValue: item.currentValue,
+                                                            unit: item.unit,
+                                                            note: item.note,
+                                                            deadline: item.deadline,
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <div className="flex items-end justify-between">
+                                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Progress</p>
+                                                        <p className="text-sm font-black text-slate-800 dark:text-slate-100">{pct.toFixed(0)}%</p>
+                                                    </div>
+                                                    <progress
+                                                        value={pct}
+                                                        max={100}
+                                                        className="h-3.5 w-full rounded-full overflow-hidden border border-slate-200/50 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-800 [&::-webkit-progress-bar]:bg-slate-100 dark:[&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:bg-linear-to-r [&::-webkit-progress-value]:from-sky-500 [&::-webkit-progress-value]:to-indigo-600 [&::-moz-progress-bar]:bg-indigo-600"
+                                                    />
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {formatGroupedNumber(item.currentValue)} / {formatGroupedNumber(item.targetValue)} {item.unit}
+                                                    </p>
+                                                </div>
+
+                                                {item.note ? <p className="text-xs text-slate-500 dark:text-slate-400 italic">{item.note}</p> : null}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
 
             <div className="relative group overflow-hidden rounded-3xl">
                 <div className="absolute -inset-1 bg-linear-to-r from-indigo-500/25 to-purple-500/25 rounded-3xl blur opacity-20 group-hover:opacity-30 transition duration-700"></div>

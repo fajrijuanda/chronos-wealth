@@ -11,6 +11,13 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStatus } from "@/components/providers/StatusProvider";
 import {
   createJointBoothProposalByEmail,
@@ -169,25 +176,28 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
           <form action={handleSubmit} className="space-y-4 py-4">
             <div className="space-y-2">
               <label htmlFor="asset-type" className="text-sm font-medium">Jenis Asset</label>
-              <select
-                id="asset-type"
-                name="assetType"
+              <input type="hidden" name="assetType" value={assetTypeValue} />
+              <Select
                 value={assetTypeValue}
-                onChange={(event) => {
-                  const next = event.target.value.toUpperCase();
+                onValueChange={(value) => {
+                  const next = value.toUpperCase();
                   if (next === "GOLD" || next === "PROPERTY" || next === "OTHER") {
                     setAssetTypeValue(next);
                     return;
                   }
                   setAssetTypeValue("BOOTH");
                 }}
-                className="w-full px-4 py-2"
               >
-                <option value="BOOTH">Booth</option>
-                <option value="GOLD">Emas</option>
-                <option value="PROPERTY">Rumah / Properti</option>
-                <option value="OTHER">Asset Lainnya</option>
-              </select>
+                <SelectTrigger id="asset-type" className="w-full">
+                  <SelectValue placeholder="Pilih jenis asset" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BOOTH">Booth</SelectItem>
+                  <SelectItem value="GOLD">Emas</SelectItem>
+                  <SelectItem value="PROPERTY">Rumah / Properti</SelectItem>
+                  <SelectItem value="OTHER">Asset Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -231,16 +241,19 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="asset-package-type" className="text-sm font-medium">Tipe Paket</label>
-                  <select
-                    id="asset-package-type"
-                    name="packageType"
+                  <input type="hidden" name="packageType" value={packageTypeValue} />
+                  <Select
                     value={packageTypeValue}
-                    onChange={(event) => setPackageTypeValue(event.target.value === "EXCLUSIVE" ? "EXCLUSIVE" : "ECONOMY")}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                    onValueChange={(value) => setPackageTypeValue(value === "EXCLUSIVE" ? "EXCLUSIVE" : "ECONOMY")}
                   >
-                    <option value="ECONOMY">Ekonomi</option>
-                    <option value="EXCLUSIVE">Eksklusif</option>
-                  </select>
+                    <SelectTrigger id="asset-package-type" className="w-full">
+                      <SelectValue placeholder="Pilih paket" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ECONOMY">Ekonomi</SelectItem>
+                      <SelectItem value="EXCLUSIVE">Eksklusif</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
