@@ -29,21 +29,33 @@ export default async function RegisterPage({
       redirect("/register?error=Please%20enter%20your%20name");
     }
 
+    let redirectTarget: string | null = null;
+    let errorMessage: string | null = null;
+
     try {
       const existingUser = await getAppUserByEmail(email);
       if (existingUser) {
-        redirect("/register?error=Email%20already%20registered.%20Please%20login");
+        redirectTarget = "/register?error=Email%20already%20registered.%20Please%20login";
+      } else {
+        await ensureAppUserByEmail({
+          email,
+          displayName,
+        });
+
+        await setSessionUserEmail(email);
+        redirectTarget = "/overview";
       }
+    } catch (e: unknown) {
+      console.error("Register Error:", e);
+      errorMessage = "Unable to register. Please try again";
+    }
 
-      await ensureAppUserByEmail({
-        email,
-        displayName,
-      });
+    if (redirectTarget) {
+      redirect(redirectTarget);
+    }
 
-      await setSessionUserEmail(email);
-      redirect("/overview");
-    } catch {
-      redirect("/register?error=Unable%20to%20register.%20Please%20try%20again");
+    if (errorMessage) {
+      redirect(`/register?error=${encodeURIComponent(errorMessage)}`);
     }
   }
 
