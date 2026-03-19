@@ -203,3 +203,34 @@ export async function importMonthlyBoothSalesByEmail(input: {
     file: input.file,
   });
 }
+
+export async function getBoothSalesHistoryByUserId(input: {
+  userId: string;
+  limit?: number;
+}) {
+  const limit = input.limit ?? 24;
+
+  return prisma.boothMonthlySale.findMany({
+    where: {
+      booth: {
+        ownerships: {
+          some: { userId: input.userId },
+        },
+      },
+    },
+    include: {
+      booth: true,
+      uploadedBy: true,
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }, { uploadedAt: "desc" }],
+    take: limit,
+  });
+}
+
+export async function getBoothSalesHistoryByEmail(input: {
+  email: string;
+  limit?: number;
+}) {
+  const user = await ensureAppUserByEmail({ email: input.email });
+  return getBoothSalesHistoryByUserId({ userId: user.id, limit: input.limit });
+}

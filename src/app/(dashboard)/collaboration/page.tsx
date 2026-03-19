@@ -11,6 +11,7 @@ import {
   setUserTargetByEmail,
 } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { redirect } from "next/navigation";
 
 export default async function CollaborationPage({
   searchParams,
@@ -23,6 +24,9 @@ export default async function CollaborationPage({
   );
 
   const workspace = await getCollaborationWorkspace(activeEmail);
+  const userQuery = `user=${encodeURIComponent(activeEmail)}`;
+  const flashOk = typeof sp.ok === "string" ? sp.ok : null;
+  const flashError = typeof sp.error === "string" ? sp.error : null;
 
   async function handleAddFriend(formData: FormData) {
     "use server";
@@ -31,11 +35,17 @@ export default async function CollaborationPage({
     const addresseeEmail = String(formData.get("addresseeEmail") ?? "");
     const partnerBasePrice = Number(formData.get("addresseeBoothBasePrice") ?? 0);
 
-    await sendFriendRequestByEmail({
-      requesterEmail,
-      addresseeEmail,
-      addresseeBoothBasePrice: partnerBasePrice > 0 ? partnerBasePrice : undefined,
-    });
+    try {
+      await sendFriendRequestByEmail({
+        requesterEmail,
+        addresseeEmail,
+        addresseeBoothBasePrice: partnerBasePrice > 0 ? partnerBasePrice : undefined,
+      });
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Friend request sent")}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to send friend request";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
   }
 
   async function handleRespondFriendRequest(formData: FormData) {
@@ -44,10 +54,17 @@ export default async function CollaborationPage({
     const friendshipId = String(formData.get("friendshipId") ?? "");
     const action = String(formData.get("action") ?? "reject");
 
-    if (!friendshipId) return;
-    if (action !== "accept" && action !== "reject") return;
+    if (!friendshipId || (action !== "accept" && action !== "reject")) {
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent("Invalid friendship action")}`);
+    }
 
-    await respondFriendRequest(friendshipId, action);
+    try {
+      await respondFriendRequest(friendshipId, action);
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(`Friend request ${action}ed`)}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to update friendship";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
   }
 
   async function handleProposal(formData: FormData) {
@@ -70,17 +87,29 @@ export default async function CollaborationPage({
         ? BoothSelectionType.EXISTING_BOOTH
         : BoothSelectionType.NEW_BOOTH;
 
-    await createJointBoothProposalByEmail({
-      requesterEmail,
-      partnerEmail,
-      boothName,
-      boothPrice,
-      requesterAvailableBalance,
-      partnerBoothPrice,
-      expectedMonthlyIncome,
-      selectedBoothType,
-      notes: notes || undefined,
-    });
+    try {
+      const result = await createJointBoothProposalByEmail({
+        requesterEmail,
+        partnerEmail,
+        boothName,
+        boothPrice,
+        requesterAvailableBalance,
+        partnerBoothPrice,
+        expectedMonthlyIncome,
+        selectedBoothType,
+        notes: notes || undefined,
+      });
+
+      const message =
+        result.mode === "SELF_PURCHASE"
+          ? "Booth purchased as fully owned"
+          : "Collaboration proposal submitted";
+
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(message)}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to process booth purchase";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
   }
 
   async function handleReviewProposal(formData: FormData) {
@@ -91,14 +120,23 @@ export default async function CollaborationPage({
     const decision = String(formData.get("decision") ?? "reject");
     const reviewerNote = String(formData.get("reviewerNote") ?? "");
 
-    if (!proposalId || !reviewerUserId) return;
+    if (!proposalId || !reviewerUserId) {
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent("Invalid proposal action")}`);
+    }
 
-    await reviewJointBoothProposal({
-      proposalId,
-      reviewerUserId,
-      approve: decision === "approve",
-      reviewerNote: reviewerNote || undefined,
-    });
+    try {
+      await reviewJointBoothProposal({
+        proposalId,
+        reviewerUserId,
+        approve: decision === "approve",
+        reviewerNote: reviewerNote || undefined,
+      });
+
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent(`Proposal ${decision}d`)}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to review proposal";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
   }
 
   async function handleSetTarget(formData: FormData) {
@@ -108,11 +146,17 @@ export default async function CollaborationPage({
     const targetBoothEquivalent = Number(formData.get("targetBoothEquivalent") ?? 0);
     const revenuePerBooth = Number(formData.get("revenuePerBooth") ?? 0);
 
-    await setUserTargetByEmail({
-      email,
-      targetBoothEquivalent,
-      revenuePerBooth: revenuePerBooth > 0 ? revenuePerBooth : undefined,
-    });
+    try {
+      await setUserTargetByEmail({
+        email,
+        targetBoothEquivalent,
+        revenuePerBooth: revenuePerBooth > 0 ? revenuePerBooth : undefined,
+      });
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Target updated")}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to update target";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
   }
 
   return (
@@ -123,6 +167,18 @@ export default async function CollaborationPage({
           Active user: <span className="font-semibold">{workspace.currentUser.email}</span>
         </p>
       </div>
+
+      {flashOk && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm">
+          {flashOk}
+        </div>
+      )}
+
+      {flashError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm">
+          {flashError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
@@ -331,7 +387,7 @@ export default async function CollaborationPage({
         </form>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Incoming Proposals</h2>
           <div className="space-y-3">
@@ -364,6 +420,23 @@ export default async function CollaborationPage({
                     </button>
                   </form>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Outgoing Proposals</h2>
+          <div className="space-y-3">
+            {workspace.outgoingProposals.length === 0 && (
+              <p className="text-sm text-slate-500">No outgoing proposals.</p>
+            )}
+            {workspace.outgoingProposals.map((proposal) => (
+              <div key={proposal.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm">
+                <p className="font-semibold">{proposal.boothName}</p>
+                <p className="text-slate-500">To: {proposal.partner.email}</p>
+                <p>Capital split: Rp {proposal.requesterCapital.toLocaleString("id-ID")} / Rp {proposal.partnerCapital.toLocaleString("id-ID")}</p>
+                <p>Status: {proposal.status}</p>
               </div>
             ))}
           </div>

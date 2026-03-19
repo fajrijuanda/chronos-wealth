@@ -1,7 +1,11 @@
 import { getIncomeSources } from "@/actions/income";
-import { importMonthlyBoothSalesByEmail } from "@/actions/booth-sales";
+import {
+    getBoothSalesHistoryByEmail,
+    importMonthlyBoothSalesByEmail,
+} from "@/actions/booth-sales";
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { redirect } from "next/navigation";
 import { PlusCircle, Wallet, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +20,14 @@ export default async function IncomePage({
     );
 
     const incomes = await getIncomeSources();
-    const workspace = await getCollaborationWorkspace(activeEmail);
+    const [workspace, salesHistory] = await Promise.all([
+        getCollaborationWorkspace(activeEmail),
+        getBoothSalesHistoryByEmail({ email: activeEmail, limit: 24 }),
+    ]);
+
+    const userQuery = `user=${encodeURIComponent(activeEmail)}`;
+    const flashOk = typeof sp.ok === "string" ? sp.ok : null;
+    const flashError = typeof sp.error === "string" ? sp.error : null;
 
     async function handleSalesUpload(formData: FormData) {
         "use server";
@@ -27,15 +38,26 @@ export default async function IncomePage({
         const file = formData.get("salesFile");
 
         if (!(file instanceof File)) {
-            throw new Error("Please upload an Excel file");
+            redirect(`/income?${userQuery}&error=${encodeURIComponent("Please upload an Excel file")}`);
         }
 
-        await importMonthlyBoothSalesByEmail({
-            uploadedByEmail,
-            month,
-            year,
-            file,
-        });
+        try {
+            const result = await importMonthlyBoothSalesByEmail({
+                uploadedByEmail,
+                month,
+                year,
+                file,
+            });
+
+            redirect(
+                `/income?${userQuery}&ok=${encodeURIComponent(
+                    `${result.imported} sales rows imported for ${month}/${year}`,
+                )}`,
+            );
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Upload failed";
+            redirect(`/income?${userQuery}&error=${encodeURIComponent(message)}`);
+        }
     }
 
     return (
@@ -50,6 +72,18 @@ export default async function IncomePage({
                     Add Income
                 </Button>
             </div>
+
+            {flashOk && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm">
+                    {flashOk}
+                </div>
+            )}
+
+            {flashError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm">
+                    {flashError}
+                </div>
+            )}
 
             <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -186,6 +220,47 @@ export default async function IncomePage({
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200/60 dark:border-slate-800">
+                    <h2 className="text-xl font-semibold">Booth Sales History</h2>
+                    <p className="text-sm text-slate-500">Latest uploaded monthly results from your owned/shared booths.</p>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs uppercase bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+                            <tr>
+                                <th className="px-6 py-4 font-medium">Period</th>
+                                <th className="px-6 py-4 font-medium">Booth</th>
+                                <th className="px-6 py-4 font-medium">Gross</th>
+                                <th className="px-6 py-4 font-medium">Net</th>
+                                <th className="px-6 py-4 font-medium">Uploaded By</th>
+                                <th className="px-6 py-4 font-medium">Uploaded At</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {salesHistory.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                                        No sales uploads yet.
+                                    </td>
+                                </tr>
+                            ) : (
+                                salesHistory.map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                        <td className="px-6 py-4">{`${item.month}/${item.year}`}</td>
+                                        <td className="px-6 py-4 font-medium">{item.booth.name}</td>
+                                        <td className="px-6 py-4 text-emerald-600">Rp {item.grossIncome.toLocaleString("id-ID")}</td>
+                                        <td className="px-6 py-4">{item.netIncome ? `Rp ${item.netIncome.toLocaleString("id-ID")}` : "-"}</td>
+                                        <td className="px-6 py-4">{item.uploadedBy.displayName}</td>
+                                        <td className="px-6 py-4">{item.uploadedAt.toLocaleString("id-ID")}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
