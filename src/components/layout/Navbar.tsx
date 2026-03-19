@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { clearSessionUserEmail, getSessionUserEmail } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
+import { MobileNav } from "./MobileNav";
 
 export async function Navbar() {
     const sessionEmail = await getSessionUserEmail();
@@ -16,8 +17,9 @@ export async function Navbar() {
     }
 
     return (
-        <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between px-6 backdrop-blur-md bg-white/60 dark:bg-black/60 border-b border-white/20 shadow-sm">
+        <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between px-4 md:px-6 backdrop-blur-md bg-white/60 dark:bg-black/60 border-b border-white/20 shadow-sm">
             <div className="flex items-center gap-4 flex-1">
+                <MobileNav sessionEmail={sessionEmail ?? undefined} />
                 <div className="relative w-full max-w-md hidden md:block">
                     <Search className="absolute ml-3 mt-2.5 h-4 w-4 text-muted-foreground" />
                     <Input

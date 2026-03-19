@@ -48,8 +48,8 @@ export async function ensureAppUserByEmail(input: {
     throw new Error("A valid user email is required");
   }
 
-  const boothBasePrice = input.boothBasePrice ?? 7_500_000;
-  ensurePositive(boothBasePrice, "boothBasePrice");
+  const boothBasePrice = input.boothBasePrice ?? 0;
+  ensurePositive(boothBasePrice === 0 ? 1 : boothBasePrice, "boothBasePrice"); // Allow 0 but ensure positive for validation if needed
 
   const result = await prisma.appUser.upsert({
     where: { email },
@@ -71,6 +71,22 @@ export async function getAppUserByEmail(email: string) {
   return prisma.appUser.findUnique({
     where: { email: email.trim().toLowerCase() },
   });
+}
+
+export async function setManualBasePrice(email: string, price: number) {
+  if (price < 0) throw new Error("Price must be at least 0");
+  
+  const user = await getAppUserByEmail(email);
+  if (!user) throw new Error("User not found");
+
+  const updated = await prisma.appUser.update({
+    where: { email: user.email },
+    data: { boothBasePrice: price },
+  });
+
+  revalidatePath("/assets");
+  revalidatePath("/simulation");
+  return updated;
 }
 
 async function requireUserByEmail(email: string): Promise<AppUser> {
@@ -475,6 +491,10 @@ export async function setSimulationBaseBoothByEmail(input: {
 
   if (!ownership) {
     throw new Error("Booth not found in your portfolio");
+  }
+
+  if (ownership.booth.packageType === BoothPackageType.EXCLUSIVE) {
+    throw new Error("Exclusive booths cannot be used as simulation base price");
   }
 
   const updatedUser = await prisma.appUser.update({

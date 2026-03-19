@@ -34,21 +34,27 @@ export async function getDashboardMetrics() {
 
   let totalBalance = 0;
   let monthlyIncome = 0;
+  let monthlyExpense = 0;
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
   transactions.forEach((tx) => {
+    const d = new Date(tx.date);
+    const inCurrentMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+
     if (tx.type === "INCOME") {
       totalBalance += tx.amount;
-      const d = new Date(tx.date);
-      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+      if (inCurrentMonth) {
         monthlyIncome += tx.amount;
       }
     } else {
       totalBalance -= tx.amount;
+      if (inCurrentMonth) {
+        monthlyExpense += tx.amount;
+      }
     }
   });
 
-  return { totalBalance, monthlyIncome };
+  return { totalBalance, monthlyIncome, monthlyExpense };
 }

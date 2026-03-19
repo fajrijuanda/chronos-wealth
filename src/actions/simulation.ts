@@ -534,7 +534,7 @@ async function simulateUserBoothPlan(input: {
       0,
       targetBoothEquivalent > 0 ? targetBoothEquivalent - boothEquivalentOwned : Number.POSITIVE_INFINITY,
     );
-    const maxBoothByCash = Math.floor(safeCashForBooth / boothPrice);
+    const maxBoothByCash = boothPrice > 0 ? Math.floor(safeCashForBooth / boothPrice) : 0;
     const boothsAdded =
       targetBoothEquivalent > 0
         ? Math.min(maxBoothByCash, Math.floor(remainingBoothNeed))

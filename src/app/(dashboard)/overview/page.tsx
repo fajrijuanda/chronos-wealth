@@ -26,7 +26,7 @@ export default async function OverviewPage({
                 <p className="text-slate-500 dark:text-slate-400">Welcome back. Here is your financial summary.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Total Balance Card */}
                 <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm flex flex-col gap-4">
                     <div className="flex items-center gap-3">
@@ -35,7 +35,7 @@ export default async function OverviewPage({
                         </div>
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Total Balance</h2>
                     </div>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    <p className="text-3xl xl:text-4xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
                         Rp {formatGroupedNumber(metrics.totalBalance)}
                     </p>
                 </div>
@@ -48,8 +48,21 @@ export default async function OverviewPage({
                         </div>
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Mo. Income</h2>
                     </div>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    <p className="text-3xl xl:text-4xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 truncate">
                         Rp {formatGroupedNumber(metrics.monthlyIncome)}
+                    </p>
+                </div>
+
+                {/* Monthly Expense Card */}
+                <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-rose-100 dark:bg-rose-900/40 rounded-xl">
+                            <TrendingDown className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+                        </div>
+                        <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Mo. Expense</h2>
+                    </div>
+                    <p className="text-3xl xl:text-4xl font-bold tracking-tight text-rose-600 dark:text-rose-400 truncate">
+                        Rp {formatGroupedNumber(metrics.monthlyExpense)}
                     </p>
                 </div>
 
@@ -61,11 +74,11 @@ export default async function OverviewPage({
                         </div>
                         <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Active Targets</h2>
                     </div>
-                    <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    <p className="text-2xl xl:text-3xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
                         {formatGroupedNumber(workspace.targetProgress.targetBoothEquivalent)} Booth Eq.
                     </p>
-                    <p className="text-sm text-slate-500">
-                        Monthly share: Rp {formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}
+                    <p className="text-xs text-slate-500 truncate">
+                        Monthly: Rp {formatGroupedNumber(workspace.targetProgress.monthlyIncomeShare)}
                     </p>
                 </div>
             </div>
