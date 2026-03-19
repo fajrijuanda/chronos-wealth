@@ -2,6 +2,7 @@
 
 import {
   AppUser,
+  BoothPurchaseTiming,
   BoothSelectionType,
   FriendshipStatus,
   ProposalStatus,
@@ -427,10 +428,59 @@ export async function getUserBoothPortfolio(userId: string) {
   }));
 }
 
+export async function upsertUserFinanceProfile(data: {
+  userId: string;
+  monthlyExpenseMin: number;
+  monthlyExpenseMax: number;
+  purchaseTiming: BoothPurchaseTiming;
+  purchaseDayOverride?: number | null;
+  openingBalance?: number;
+}) {
+  if (data.monthlyExpenseMin < 0 || data.monthlyExpenseMax < 0) {
+    throw new Error("Monthly expense values must be zero or positive");
+  }
+
+  if (data.monthlyExpenseMax < data.monthlyExpenseMin) {
+    throw new Error("monthlyExpenseMax cannot be lower than monthlyExpenseMin");
+  }
+
+  if (
+    data.purchaseDayOverride !== undefined &&
+    data.purchaseDayOverride !== null &&
+    (data.purchaseDayOverride < 1 || data.purchaseDayOverride > 31)
+  ) {
+    throw new Error("purchaseDayOverride must be between 1 and 31");
+  }
+
+  const result = await prisma.userFinanceProfile.upsert({
+    where: { userId: data.userId },
+    update: {
+      monthlyExpenseMin: data.monthlyExpenseMin,
+      monthlyExpenseMax: data.monthlyExpenseMax,
+      purchaseTiming: data.purchaseTiming,
+      purchaseDayOverride: data.purchaseDayOverride ?? null,
+      openingBalance: data.openingBalance ?? 0,
+    },
+    create: {
+      userId: data.userId,
+      monthlyExpenseMin: data.monthlyExpenseMin,
+      monthlyExpenseMax: data.monthlyExpenseMax,
+      purchaseTiming: data.purchaseTiming,
+      purchaseDayOverride: data.purchaseDayOverride ?? null,
+      openingBalance: data.openingBalance ?? 0,
+    },
+  });
+
+  revalidatePath("/simulation");
+  revalidatePath("/collaboration");
+
+  return result;
+}
+
 export async function getCollaborationWorkspace(email: string) {
   const currentUser = await ensureAppUserByEmail({ email });
 
-  const [friendships, incomingProposals, outgoingProposals, portfolio, targetProgress] =
+  const [friendships, incomingProposals, outgoingProposals, portfolio, targetProgress, financeProfile] =
     await Promise.all([
       prisma.friendship.findMany({
         where: {
@@ -465,6 +515,7 @@ export async function getCollaborationWorkspace(email: string) {
       }),
       getUserBoothPortfolio(currentUser.id),
       getUserBoothTargetProgress(currentUser.id),
+      prisma.userFinanceProfile.findUnique({ where: { userId: currentUser.id } }),
     ]);
 
   const normalizedFriendships = friendships.map((friendship) => {
@@ -491,6 +542,7 @@ export async function getCollaborationWorkspace(email: string) {
     outgoingProposals,
     portfolio,
     targetProgress,
+    financeProfile,
   };
 }
 
@@ -548,5 +600,24 @@ export async function setUserTargetByEmail(input: {
     userId: user.id,
     targetBoothEquivalent: input.targetBoothEquivalent,
     revenuePerBooth: input.revenuePerBooth,
+  });
+}
+
+export async function setUserFinanceProfileByEmail(input: {
+  email: string;
+  monthlyExpenseMin: number;
+  monthlyExpenseMax: number;
+  purchaseTiming: BoothPurchaseTiming;
+  purchaseDayOverride?: number | null;
+  openingBalance?: number;
+}) {
+  const user = await ensureAppUserByEmail({ email: input.email });
+  return upsertUserFinanceProfile({
+    userId: user.id,
+    monthlyExpenseMin: input.monthlyExpenseMin,
+    monthlyExpenseMax: input.monthlyExpenseMax,
+    purchaseTiming: input.purchaseTiming,
+    purchaseDayOverride: input.purchaseDayOverride,
+    openingBalance: input.openingBalance,
   });
 }

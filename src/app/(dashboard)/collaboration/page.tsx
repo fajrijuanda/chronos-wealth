@@ -1,4 +1,5 @@
 import {
+  BoothPurchaseTiming,
   BoothSelectionType,
   ProposalStatus,
 } from "@prisma/client";
@@ -8,8 +9,10 @@ import {
   respondFriendRequest,
   reviewJointBoothProposal,
   sendFriendRequestByEmail,
+  setUserFinanceProfileByEmail,
   setUserTargetByEmail,
 } from "@/actions/collaboration";
+import { createIncomeSourceByEmail } from "@/actions/income";
 import { getActiveUserEmail } from "@/lib/active-user";
 import { redirect } from "next/navigation";
 
@@ -159,6 +162,63 @@ export default async function CollaborationPage({
     }
   }
 
+  async function handleSetFinanceProfile(formData: FormData) {
+    "use server";
+
+    const email = String(formData.get("email") ?? "");
+    const monthlyExpenseMin = Number(formData.get("monthlyExpenseMin") ?? 0);
+    const monthlyExpenseMax = Number(formData.get("monthlyExpenseMax") ?? 0);
+    const openingBalance = Number(formData.get("openingBalance") ?? 0);
+    const purchaseTimingRaw = String(
+      formData.get("purchaseTiming") ?? BoothPurchaseTiming.START_OF_MONTH,
+    );
+    const purchaseDayRaw = Number(formData.get("purchaseDayOverride") ?? 0);
+
+    const purchaseTiming =
+      purchaseTimingRaw === BoothPurchaseTiming.END_OF_MONTH
+        ? BoothPurchaseTiming.END_OF_MONTH
+        : BoothPurchaseTiming.START_OF_MONTH;
+
+    try {
+      await setUserFinanceProfileByEmail({
+        email,
+        monthlyExpenseMin,
+        monthlyExpenseMax,
+        openingBalance,
+        purchaseTiming,
+        purchaseDayOverride: purchaseDayRaw > 0 ? purchaseDayRaw : null,
+      });
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Finance profile updated")}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to update finance profile";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+  }
+
+  async function handleAddIncomeSchedule(formData: FormData) {
+    "use server";
+
+    const ownerEmail = String(formData.get("ownerEmail") ?? "");
+    const name = String(formData.get("incomeName") ?? "");
+    const amount = Number(formData.get("incomeAmount") ?? 0);
+    const payoutDate = Number(formData.get("incomePayoutDate") ?? 1);
+
+    try {
+      await createIncomeSourceByEmail({
+        ownerEmail,
+        name,
+        amount,
+        payoutDate,
+        isRecurring: true,
+        category: "SALARY",
+      });
+      redirect(`/collaboration?${userQuery}&ok=${encodeURIComponent("Income schedule saved")}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to save income schedule";
+      redirect(`/collaboration?${userQuery}&error=${encodeURIComponent(message)}`);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -221,6 +281,75 @@ export default async function CollaborationPage({
         </div>
 
         <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 p-6 border border-white/20 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Finance Profile for Simulation</h2>
+          <form action={handleSetFinanceProfile} className="space-y-3 mb-6">
+            <input type="hidden" name="email" value={workspace.currentUser.email} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="expense-min" className="block text-sm font-medium">Expense Min (Rp)</label>
+                <input
+                  id="expense-min"
+                  name="monthlyExpenseMin"
+                  type="number"
+                  min={0}
+                  defaultValue={workspace.financeProfile?.monthlyExpenseMin ?? 1_000_000}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="expense-max" className="block text-sm font-medium">Expense Max (Rp)</label>
+                <input
+                  id="expense-max"
+                  name="monthlyExpenseMax"
+                  type="number"
+                  min={0}
+                  defaultValue={workspace.financeProfile?.monthlyExpenseMax ?? 1_000_000}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="opening-balance" className="block text-sm font-medium">Opening Balance (Rp)</label>
+                <input
+                  id="opening-balance"
+                  name="openingBalance"
+                  type="number"
+                  min={0}
+                  defaultValue={workspace.financeProfile?.openingBalance ?? 0}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="purchase-timing" className="block text-sm font-medium">Purchase Timing</label>
+                <select
+                  id="purchase-timing"
+                  name="purchaseTiming"
+                  defaultValue={workspace.financeProfile?.purchaseTiming ?? BoothPurchaseTiming.START_OF_MONTH}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                >
+                  <option value={BoothPurchaseTiming.START_OF_MONTH}>Start of Month</option>
+                  <option value={BoothPurchaseTiming.END_OF_MONTH}>End of Month</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="purchase-day-override" className="block text-sm font-medium">Purchase Day Override (1-31, optional)</label>
+              <input
+                id="purchase-day-override"
+                name="purchaseDayOverride"
+                type="number"
+                min={1}
+                max={31}
+                defaultValue={workspace.financeProfile?.purchaseDayOverride ?? ""}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+              />
+            </div>
+            <button className="rounded-xl px-4 py-2 bg-indigo-700 text-white hover:bg-indigo-800" type="submit">
+              Save Finance Profile
+            </button>
+          </form>
+
           <h2 className="text-xl font-semibold mb-4">Add Friend</h2>
           <form action={handleAddFriend} className="space-y-3">
             <input type="hidden" name="requesterEmail" value={workspace.currentUser.email} />
@@ -272,6 +401,52 @@ export default async function CollaborationPage({
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="mt-6 border-t border-slate-200/70 dark:border-slate-800 pt-5">
+            <h3 className="font-semibold mb-2">Add Income Schedule</h3>
+            <p className="text-xs text-slate-500 mb-3">Catat tanggal pendapatan bulanan per user, misalnya gajian tanggal 1 atau 30.</p>
+            <form action={handleAddIncomeSchedule} className="space-y-3">
+              <input type="hidden" name="ownerEmail" value={workspace.currentUser.email} />
+              <div>
+                <label htmlFor="income-name" className="block text-sm font-medium">Income Name</label>
+                <input
+                  id="income-name"
+                  name="incomeName"
+                  type="text"
+                  defaultValue="Salary"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="income-amount" className="block text-sm font-medium">Amount (Rp)</label>
+                  <input
+                    id="income-amount"
+                    name="incomeAmount"
+                    type="number"
+                    min={1}
+                    defaultValue={5_000_000}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="income-day" className="block text-sm font-medium">Payout Day</label>
+                  <input
+                    id="income-day"
+                    name="incomePayoutDate"
+                    type="number"
+                    min={1}
+                    max={31}
+                    defaultValue={1}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black/50 px-3 py-2"
+                  />
+                </div>
+              </div>
+              <button className="rounded-xl px-4 py-2 bg-slate-700 text-white hover:bg-slate-800" type="submit">
+                Save Income Schedule
+              </button>
+            </form>
           </div>
         </div>
       </div>
