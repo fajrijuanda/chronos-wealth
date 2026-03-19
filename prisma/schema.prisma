@@ -3,152 +3,149 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// Manajemen Sumber Pemasukan
 model IncomeSource {
-  id              String   @id @default(cuid())
-  name            String   // cth: "Booth 01 - 50", "Gaji IT", "SaaS POS Langganan"
-  category        CategoryType // BOOTH, SAAS, SALARY, PROJECT, COMMISSION
-  amount          Float
-  isRecurring     Boolean  @default(true)
-  payoutDate      Int?     // Tanggal cair (1-31) untuk recurring
-  expectedDate    DateTime? // Tanggal cair spesifik untuk one-time project
-  isActive        Boolean  @default(true)
-  ownerUserId     String?
-  ownerUser       AppUser? @relation("UserIncomeSources", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  transactions    Transaction[]
+  id           String        @id @default(cuid())
+  name         String
+  category     CategoryType
+  amount       Float
+  isRecurring  Boolean       @default(true)
+  payoutDate   Int?
+  expectedDate DateTime?
+  isActive     Boolean       @default(true)
+  ownerUserId  String?
+  ownerUser    AppUser?      @relation("UserIncomeSources", fields: [ownerUserId], references: [id])
+  transactions Transaction[]
 }
 
 model AppUser {
-  id               String              @id @default(cuid())
-  email            String              @unique
-  displayName      String
-  boothBasePrice   Float
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  sentFriendships  Friendship[]        @relation("FriendshipRequester")
-  gotFriendships   Friendship[]        @relation("FriendshipAddressee")
-  sentProposals    JointBoothProposal[] @relation("ProposalRequester")
-  gotProposals     JointBoothProposal[] @relation("ProposalPartner")
-  boothOwnerships  BoothOwnership[]
-  uploadedSales    BoothMonthlySale[]  @relation("SaleUploader")
-  boothTarget      UserBoothTarget?
-  financeProfile   UserFinanceProfile?
-  incomeSources    IncomeSource[]      @relation("UserIncomeSources")
+  id              String               @id @default(cuid())
+  email           String               @unique
+  displayName     String
+  boothBasePrice  Float
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  uploadedSales   BoothMonthlySale[]   @relation("SaleUploader")
+  boothOwnerships BoothOwnership[]
+  gotFriendships  Friendship[]         @relation("FriendshipAddressee")
+  sentFriendships Friendship[]         @relation("FriendshipRequester")
+  incomeSources   IncomeSource[]       @relation("UserIncomeSources")
+  gotProposals    JointBoothProposal[] @relation("ProposalPartner")
+  sentProposals   JointBoothProposal[] @relation("ProposalRequester")
+  boothTarget     UserBoothTarget?
+  financeProfile  UserFinanceProfile?
 }
 
 model UserFinanceProfile {
-  id                    String              @id @default(cuid())
-  userId                String              @unique
-  monthlyExpenseMin     Float               @default(1000000)
-  monthlyExpenseMax     Float               @default(1000000)
-  purchaseTiming        BoothPurchaseTiming @default(START_OF_MONTH)
-  purchaseDayOverride   Int?
-  openingBalance        Float               @default(0)
-  idleCashTarget        Float               @default(1000000000)
-  holdingCapitalTarget  Float               @default(1500000000)
-  holdingContributionPct Float              @default(50)
-  holdingLaunchDate     DateTime            @default(dbgenerated("'2028-07-01 00:00:00'::timestamp without time zone"))
-  pt2BuildCapitalTarget Float               @default(8000000000)
-  pt2ContributionPct    Float               @default(50)
-  pt2LaunchDate         DateTime            @default(dbgenerated("'2030-01-01 00:00:00'::timestamp without time zone"))
-  renewEconomyBoothContracts Boolean        @default(true)
-  renewExclusiveBoothContracts Boolean      @default(true)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  user                  AppUser             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String              @id @default(cuid())
+  userId                       String              @unique
+  monthlyExpenseMin            Float               @default(1000000)
+  monthlyExpenseMax            Float               @default(1000000)
+  purchaseTiming               BoothPurchaseTiming @default(START_OF_MONTH)
+  purchaseDayOverride          Int?
+  openingBalance               Float               @default(0)
+  createdAt                    DateTime            @default(now())
+  updatedAt                    DateTime            @updatedAt
+  holdingCapitalTarget         Float               @default(1500000000)
+  holdingContributionPct       Float               @default(50)
+  holdingLaunchDate            DateTime            @default(dbgenerated("'2028-07-01 00:00:00'::timestamp without time zone"))
+  idleCashTarget               Float               @default(1000000000)
+  renewEconomyBoothContracts   Boolean             @default(true)
+  pt2BuildCapitalTarget        Float               @default(8000000000)
+  pt2ContributionPct           Float               @default(50)
+  pt2LaunchDate                DateTime            @default(dbgenerated("'2030-01-01 00:00:00'::timestamp without time zone"))
+  renewExclusiveBoothContracts Boolean             @default(true)
+  user                         AppUser             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Friendship {
-  id              String            @id @default(cuid())
-  requesterId     String
-  addresseeId     String
-  status          FriendshipStatus  @default(PENDING)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  requester       AppUser           @relation("FriendshipRequester", fields: [requesterId], references: [id])
-  addressee       AppUser           @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  addressee   AppUser          @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+  requester   AppUser          @relation("FriendshipRequester", fields: [requesterId], references: [id])
 
   @@unique([requesterId, addresseeId])
 }
 
 model JointBoothProposal {
-  id                    String                @id @default(cuid())
+  id                    String             @id @default(cuid())
   requesterId           String
   partnerId             String
   boothName             String
   requesterCapital      Float
   partnerCapital        Float
   expectedMonthlyIncome Float
-  packageType           BoothPackageType      @default(ECONOMY)
-  mouSignedAt           DateTime              @default(now())
-  referralEconomyBooths Int                   @default(0)
-  status                ProposalStatus        @default(PENDING)
+  status                ProposalStatus     @default(PENDING)
   selectedBoothType     BoothSelectionType
   notes                 String?
-  proposedAt            DateTime              @default(now())
+  proposedAt            DateTime           @default(now())
   reviewedAt            DateTime?
   reviewerNote          String?
-  createdBoothId        String?               @unique
-  requester             AppUser               @relation("ProposalRequester", fields: [requesterId], references: [id])
-  partner               AppUser               @relation("ProposalPartner", fields: [partnerId], references: [id])
-  createdBooth          Booth?                @relation("CreatedFromProposal", fields: [createdBoothId], references: [id])
+  createdBoothId        String?            @unique
+  mouSignedAt           DateTime           @default(now())
+  packageType           BoothPackageType   @default(ECONOMY)
+  referralEconomyBooths Int                @default(0)
+  createdBooth          Booth?             @relation("CreatedFromProposal", fields: [createdBoothId], references: [id])
+  partner               AppUser            @relation("ProposalPartner", fields: [partnerId], references: [id])
+  requester             AppUser            @relation("ProposalRequester", fields: [requesterId], references: [id])
 }
 
 model Booth {
-  id                    String            @id @default(cuid())
-  name                  String
-  expectedMonthlyIncome Float
-  boothUnitCount        Int               @default(1)
-  packageType           BoothPackageType  @default(ECONOMY)
-  mouSignedAt           DateTime          @default(now())
-  contractDurationMonths Int              @default(24)
-  economyProfitSharePct Float             @default(30)
-  exclusiveSharePhase1Pct Float           @default(40)
-  exclusiveSharePhase2Pct Float           @default(60)
-  exclusiveRenewalCapital Float           @default(20000000)
-  exclusivePhase2StartsAfterMonths Int    @default(96)
-  referralEconomyBooths Int               @default(0)
-  referralCommissionPerBooth Float        @default(250000)
-  isShared              Boolean           @default(false)
-  active                Boolean           @default(true)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  ownerships            BoothOwnership[]
-  monthlySales          BoothMonthlySale[]
-  createdByProposal     JointBoothProposal?   @relation("CreatedFromProposal")
-
-  @@unique([name])
+  id                               String              @id @default(cuid())
+  name                             String              @unique
+  expectedMonthlyIncome            Float
+  isShared                         Boolean             @default(false)
+  active                           Boolean             @default(true)
+  createdAt                        DateTime            @default(now())
+  updatedAt                        DateTime            @updatedAt
+  mouSignedAt                      DateTime            @default(now())
+  packageType                      BoothPackageType    @default(ECONOMY)
+  referralCommissionPerBooth       Float               @default(250000)
+  referralEconomyBooths            Int                 @default(0)
+  boothUnitCount                   Int                 @default(1)
+  contractDurationMonths           Int                 @default(24)
+  economyProfitSharePct            Float               @default(30)
+  exclusivePhase2StartsAfterMonths Int                 @default(96)
+  exclusiveRenewalCapital          Float               @default(20000000)
+  exclusiveSharePhase1Pct          Float               @default(40)
+  exclusiveSharePhase2Pct          Float               @default(60)
+  monthlySales                     BoothMonthlySale[]
+  ownerships                       BoothOwnership[]
+  createdByProposal                JointBoothProposal? @relation("CreatedFromProposal")
 }
 
 model BoothOwnership {
-  id               String   @id @default(cuid())
-  boothId          String
-  userId           String
-  capitalAmount    Float
-  revenueSharePct  Float
-  createdAt        DateTime @default(now())
-  booth            Booth    @relation(fields: [boothId], references: [id], onDelete: Cascade)
-  user             AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  boothId         String
+  userId          String
+  capitalAmount   Float
+  revenueSharePct Float
+  createdAt       DateTime @default(now())
+  booth           Booth    @relation(fields: [boothId], references: [id], onDelete: Cascade)
+  user            AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([boothId, userId])
 }
 
 model BoothMonthlySale {
-  id             String   @id @default(cuid())
-  boothId        String
-  month          Int
-  year           Int
-  grossIncome    Float
-  netIncome      Float?
-  uploadedById   String
-  uploadedAt     DateTime @default(now())
-  booth          Booth    @relation(fields: [boothId], references: [id], onDelete: Cascade)
-  uploadedBy     AppUser  @relation("SaleUploader", fields: [uploadedById], references: [id])
+  id           String   @id @default(cuid())
+  boothId      String
+  month        Int
+  year         Int
+  grossIncome  Float
+  netIncome    Float?
+  uploadedById String
+  uploadedAt   DateTime @default(now())
+  booth        Booth    @relation(fields: [boothId], references: [id], onDelete: Cascade)
+  uploadedBy   AppUser  @relation("SaleUploader", fields: [uploadedById], references: [id])
 
   @@unique([boothId, month, year])
 }
@@ -163,43 +160,40 @@ model UserBoothTarget {
   user                  AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Pencatatan Transaksi Real-time
 model Transaction {
-  id              String   @id @default(cuid())
-  type            TxType   // INCOME, EXPENSE
+  id              String        @id @default(cuid())
+  type            TxType
   amount          Float
-  date            DateTime @default(now())
+  date            DateTime      @default(now())
   description     String
   sourceId        String?
+  expenseCategory String?
   source          IncomeSource? @relation(fields: [sourceId], references: [id])
-  expenseCategory String?  // LIFESTYLE, SKINCARE, EDUCATION, ASSET
 }
 
-// Sistem Peringatan & Batas Pengeluaran
 model BudgetLimit {
-  id              String   @id @default(cuid())
-  category        String   @unique // LIFESTYLE, FOOD, SKINCARE
-  maxLimit        Float
-  warningThreshold Float   // cth: 80% dari maxLimit
+  id               String @id @default(cuid())
+  category         String @unique
+  maxLimit         Float
+  warningThreshold Float
 }
 
-// Alokasi Target & Tabungan
 model SavingGoal {
-  id              String   @id @default(cuid())
-  name            String   // cth: "DP Rumah Valerian", "S2 Korea", "Beli Kendaraan"
-  targetAmount    Float
-  currentAmount   Float    @default(0)
-  deadline        DateTime
-  priority        Int      // 1 (Highest) to 5 (Lowest)
+  id            String   @id @default(cuid())
+  name          String
+  targetAmount  Float
+  currentAmount Float    @default(0)
+  deadline      DateTime
+  priority      Int
 }
 
 enum CategoryType {
   BOOTH
-  STOCK
   SAAS
   SALARY
   PROJECT
   COMMISSION
+  STOCK
 }
 
 enum TxType {

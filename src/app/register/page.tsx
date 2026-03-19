@@ -47,7 +47,11 @@ export default async function RegisterPage({
       }
     } catch (e: unknown) {
       console.error("Register Error:", e);
-      errorMessage = "Unable to register. Please try again";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      } else {
+        errorMessage = "Unable to register. Please try again";
+      }
     }
 
     if (redirectTarget) {
