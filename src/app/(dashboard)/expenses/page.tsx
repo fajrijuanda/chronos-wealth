@@ -3,6 +3,8 @@ import { AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+export const dynamic = "force-dynamic";
+
 export default async function ExpensesPage() {
     const lifestyleWarning = await getCategoryExpenseWarning("LIFESTYLE");
     const foodWarning = await getCategoryExpenseWarning("FOOD");
