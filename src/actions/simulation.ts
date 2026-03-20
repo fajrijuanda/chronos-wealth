@@ -70,6 +70,8 @@ type SimulatedEconomyContract = {
 };
 
 const SALARY_DOUBLE_START_MONTH = new Date(2027, 4, 1);
+const EXTRA_ONE_TIME_NON_BOOTH_MONTH = new Date(2026, 3, 1);
+const EXTRA_BOOTH_COMMISSION_START_MONTH = new Date(2026, 4, 1);
 const EXTRA_BOOTH_COMMISSION_PER_MONTH = 500_000;
 const EXTRA_CASHIER_PARTNERS_PER_MONTH = 4_000_000;
 const EXTRA_FREELANCE_PER_MONTH = 2_000_000;
@@ -471,7 +473,10 @@ async function simulateUserBoothPlan(input: {
       }
     }
 
-    if (input.scenarioOptions.includeExtraBoothCommission) {
+    if (
+      input.scenarioOptions.includeExtraBoothCommission &&
+      startOfMonth(monthDate) >= startOfMonth(EXTRA_BOOTH_COMMISSION_START_MONTH)
+    ) {
       events.push({
         day: purchaseDay,
         amount: EXTRA_BOOTH_COMMISSION_PER_MONTH,
@@ -480,20 +485,26 @@ async function simulateUserBoothPlan(input: {
       monthlyCommissionIncome += EXTRA_BOOTH_COMMISSION_PER_MONTH;
     }
 
-    if (input.scenarioOptions.includeExtraCashierPartners) {
+    if (
+      input.scenarioOptions.includeExtraCashierPartners &&
+      monthKey(monthDate) === monthKey(EXTRA_ONE_TIME_NON_BOOTH_MONTH)
+    ) {
       events.push({
         day: purchaseDay,
         amount: EXTRA_CASHIER_PARTNERS_PER_MONTH,
-        label: "Skenario: +2 mitra kasir (Rp 2.000.000/mitra)",
+        label: "Skenario (sekali): +2 mitra kasir (Rp 2.000.000/mitra)",
       });
       monthlyNonBoothIncome += EXTRA_CASHIER_PARTNERS_PER_MONTH;
     }
 
-    if (input.scenarioOptions.includeExtraFreelance) {
+    if (
+      input.scenarioOptions.includeExtraFreelance &&
+      monthKey(monthDate) === monthKey(EXTRA_ONE_TIME_NON_BOOTH_MONTH)
+    ) {
       events.push({
         day: purchaseDay,
         amount: EXTRA_FREELANCE_PER_MONTH,
-        label: "Skenario: freelance tambahan Rp 2.000.000/bulan",
+        label: "Skenario (sekali): freelance tambahan Rp 2.000.000",
       });
       monthlyNonBoothIncome += EXTRA_FREELANCE_PER_MONTH;
     }
