@@ -372,9 +372,17 @@ export async function decideBoothPurchaseStrategy(input: {
       const packageType = input.packageType ?? BoothPackageType.ECONOMY;
       const mouSignedAt = input.mouSignedAt ?? new Date();
       const payoutDate = computeBoothRecurringPayoutDay(mouSignedAt, packageType);
-      const existingBooth = await tx.booth.findUnique({ where: { name: input.boothName } });
-      if (existingBooth) {
-          throw new Error(`Booth with name "${input.boothName}" already exists in the system.`);
+      
+      // Check if current user already owns a booth with this name
+      const existingBoothForUser = await tx.boothOwnership.findFirst({
+        where: {
+          userId: input.requesterId,
+          booth: { name: input.boothName }
+        },
+        include: { booth: true }
+      });
+      if (existingBoothForUser) {
+          throw new Error(`You already own a booth with name "${input.boothName}".`);
       }
 
       const mouDocumentName = input.mouDocumentName?.trim();

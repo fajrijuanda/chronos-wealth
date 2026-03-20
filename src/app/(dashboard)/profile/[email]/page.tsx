@@ -96,83 +96,123 @@ export default async function PublicProfilePage({
     .slice(0, 6);
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 pb-10">
       <div className="flex items-center justify-between gap-3">
         <Link href="/profile" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
           <ArrowLeft className="h-4 w-4" /> Back to My Profile
         </Link>
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Relationship: {profile.relationship}
+          {profile.relationship}
         </span>
       </div>
 
-      <section className="surface-card overflow-hidden p-0">
-        <div className="relative h-40 bg-linear-to-r from-[#85a2ff]/50 via-[#8ed8f8]/40 to-[#9ce4bb]/45 dark:from-indigo-900/45 dark:via-cyan-900/35 dark:to-emerald-900/35">
-          <div className="absolute -right-10 top-6 h-28 w-28 rounded-full bg-white/25 blur-xl" />
-          <div className="absolute left-[34%] top-10 h-16 w-16 rounded-2xl bg-white/20 blur-lg" />
+      {/* Header Section */}
+      <section className="surface-card overflow-hidden p-0 relative">
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500/70 via-cyan-500/70 to-emerald-500/70"></div>
+        <div className="relative h-32 bg-linear-to-135 from-indigo-500/20 via-cyan-500/15 to-emerald-500/20 dark:from-indigo-900/40 dark:via-cyan-900/30 dark:to-emerald-900/30">
+          <div className="absolute -right-20 -top-10 h-40 w-40 rounded-full bg-gradient-to-br from-indigo-400/10 to-transparent blur-3xl" />
+          <div className="absolute -left-20 bottom-0 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400/10 to-transparent blur-3xl" />
         </div>
-        <div className="px-6 pb-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+
+        <div className="relative px-6 pb-6 pt-0">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            {/* Left: Avatar + Info */}
+            <div className="flex gap-4 sm:items-center">
               {profile.profileUser.profilePhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.profileUser.profilePhotoUrl}
                   alt={profile.profileUser.displayName}
-                  className="-mt-12 h-24 w-24 rounded-3xl border-4 border-white object-cover shadow-lg dark:border-slate-900"
+                  className="-mt-16 h-28 w-28 rounded-2xl border-4 border-white object-cover shadow-xl dark:border-slate-900"
                 />
               ) : (
-                <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-linear-to-br from-[#5f86ff] to-[#76ccff] text-3xl font-bold text-white shadow-lg dark:border-slate-900">
+                <div className="-mt-16 flex h-28 w-28 items-center justify-center rounded-2xl border-4 border-white bg-linear-to-br from-indigo-500 to-cyan-500 text-4xl font-bold text-white shadow-xl dark:border-slate-900">
                   {(profile.profileUser.displayName.trim().charAt(0) || "U").toUpperCase()}
                 </div>
               )}
-              <div className="rounded-2xl bg-background/85 px-3 py-2 backdrop-blur-sm sm:px-4">
+              
+              <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{profile.profileUser.displayName}</h1>
-                <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200"><Mail className="h-4 w-4" /> {profile.profileUser.email}</p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Joined: {formatJakartaDateTime(profile.profileUser.createdAt)}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/35 dark:text-indigo-300"><BriefcaseBusiness className="h-3 w-3" /> Financial Strategist</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300"><ShieldCheck className="h-3 w-3" /> Active</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                    <BriefcaseBusiness className="h-3.5 w-3.5" /> Financial Strategist
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Active
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 xl:pt-1 xl:justify-end">
+            {/* Right: Action Button */}
+            <div className="flex flex-wrap gap-2">
               {profile.relationship === "NONE" ? (
-                <Link href="/profile?tab=connections" className="go-chip">Connect from Profile</Link>
+                <Link href="/profile?tab=connections" className="go-chip">Connect</Link>
               ) : null}
             </div>
           </div>
-          <p className="mt-5 max-w-4xl text-sm leading-relaxed text-muted-foreground">
-            {profile.profileUser.bio || "Pengguna ini belum menambahkan bio."}
-          </p>
+
+          {/* Contact Info */}
+          <div className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:gap-4">
+            <span className="flex items-center gap-2"><Mail className="h-4 w-4" /> {profile.profileUser.email}</span>
+            <span className="hidden before:content-['•'] before:mx-2 sm:inline" />
+            <span>Joined {formatJakartaDateTime(profile.profileUser.createdAt)}</span>
+          </div>
+
+          {/* Bio Section */}
+          {profile.profileUser.bio && (
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+              {profile.profileUser.bio}
+            </p>
+          )}
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <div className="surface-card-soft p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Connections</p>
-          <p className="mt-1 text-2xl font-bold">{profile.connectedCount}</p>
+      {/* Key Metrics - 4 Items 1 Row */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="surface-card group relative overflow-hidden p-5 transition-all hover:shadow-lg">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-500/10 to-transparent blur-2xl transition-all group-hover:scale-125" />
+          <div className="relative">
+            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Active Connections</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{profile.connectedCount}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Partner terkoneksi</p>
+          </div>
         </div>
-        <div className="surface-card-soft p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Portfolio Booth</p>
-          <p className="mt-1 text-2xl font-bold">{profile.portfolioCount}</p>
+
+        <div className="surface-card group relative overflow-hidden p-5 transition-all hover:shadow-lg">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-cyan-500/10 to-transparent blur-2xl transition-all group-hover:scale-125" />
+          <div className="relative">
+            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Portfolio Booth</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{profile.portfolioCount}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Asset aktif</p>
+          </div>
         </div>
-        <div className="surface-card-soft p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Target Booth Eq.</p>
-          <p className="mt-1 text-2xl font-bold">{profile.boothTarget.targetBoothEquivalent}</p>
+
+        <div className="surface-card group relative overflow-hidden p-5 transition-all hover:shadow-lg">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-transparent blur-2xl transition-all group-hover:scale-125" />
+          <div className="relative">
+            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Booth Equivalent</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{profile.boothTarget.targetBoothEquivalent}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Target</p>
+          </div>
         </div>
-        <div className="surface-card-soft p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Target Income</p>
-          <p className="mt-1 text-lg font-bold">Rp {formatGroupedNumber(profile.boothTarget.targetIncome)}</p>
+
+        <div className="surface-card group relative overflow-hidden p-5 transition-all hover:shadow-lg">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-amber-500/10 to-transparent blur-2xl transition-all group-hover:scale-125" />
+          <div className="relative">
+            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Target Monthly Income</p>
+            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">Rp {formatGroupedNumber(profile.boothTarget.targetIncome)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Income goal</p>
+          </div>
         </div>
       </section>
 
-      <Tabs defaultValue={initialTab} className="space-y-5">
-        <TabsList variant="line" className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="overview">Profile</TabsTrigger>
-          <TabsTrigger value="teams">Teams</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
+      {/* Main Tabs */}
+      <Tabs defaultValue={initialTab} className="space-y-6">
+        <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b border-border/40">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="teams">Teams & Focus</TabsTrigger>
+          <TabsTrigger value="projects">Portfolio</TabsTrigger>
           <TabsTrigger value="connections">Connections</TabsTrigger>
         </TabsList>
 

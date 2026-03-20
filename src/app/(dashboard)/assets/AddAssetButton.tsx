@@ -11,6 +11,7 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import DatePickerCalendar from "@/components/ui/DatePickerCalendar";
 import {
   Select,
   SelectContent,
@@ -257,18 +258,13 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <label htmlFor="asset-mou-signed-at" className="text-sm font-medium">Tanggal TTD MoU</label>
-                    <input
-                      id="asset-mou-signed-at"
-                      name="mouSignedAt"
-                      type="date"
-                      required
-                      value={mouDateValue}
-                      onChange={(event) => setMouDateValue(event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
-                    />
-                  </div>
+                  <DatePickerCalendar
+                    id="asset-mou-signed-at"
+                    label="Tanggal TTD MoU"
+                    value={mouDateValue}
+                    onChange={setMouDateValue}
+                  />
+                  <input type="hidden" name="mouSignedAt" value={mouDateValue} />
 
                   <div className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                     <p>

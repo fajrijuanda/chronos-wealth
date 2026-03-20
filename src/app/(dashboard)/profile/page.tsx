@@ -84,7 +84,8 @@ export default async function ProfilePage({
   return (
     <div className="space-y-6 pb-10">
       {/* Header Section */}
-      <section className="surface-card overflow-hidden p-0">
+      <section className="surface-card overflow-hidden p-0 relative">
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500/70 via-cyan-500/70 to-emerald-500/70"></div>
         <div className="relative h-32 bg-linear-to-135 from-indigo-500/20 via-cyan-500/15 to-emerald-500/20 dark:from-indigo-900/40 dark:via-cyan-900/30 dark:to-emerald-900/30">
           <div className="absolute -right-20 -top-10 h-40 w-40 rounded-full bg-gradient-to-br from-indigo-400/10 to-transparent blur-3xl" />
           <div className="absolute -left-20 bottom-0 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400/10 to-transparent blur-3xl" />
@@ -143,8 +144,8 @@ export default async function ProfilePage({
         </div>
       </section>
 
-      {/* Key Metrics - 2x2 Grid */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-2">
+      {/* Key Metrics - 4 Items 1 Row */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="surface-card group relative overflow-hidden p-5 transition-all hover:shadow-lg">
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-500/10 to-transparent blur-2xl transition-all group-hover:scale-125" />
           <div className="relative">

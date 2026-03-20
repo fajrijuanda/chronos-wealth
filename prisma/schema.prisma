@@ -145,7 +145,7 @@ model JointBoothProposal {
 
 model Booth {
   id                               String              @id @default(cuid())
-  name                             String              @unique
+  name                             String
   expectedMonthlyIncome            Float
   mouDocumentName                  String?
   mouDocumentMimeType              String?

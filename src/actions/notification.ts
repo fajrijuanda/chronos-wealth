@@ -8,6 +8,26 @@ import {
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
+async function emitNotificationViaWebSocket(userId: string, notification: any) {
+  try {
+    // Emit notification via WebSocket
+    await fetch(process.env.INTERNAL_API_URL || "http://localhost:3000", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "notify",
+        userId,
+        data: notification,
+      }),
+    }).catch(() => {
+      // Silently fail if WebSocket server is not available
+      console.warn(`Could not emit notification via WebSocket for user ${userId}`);
+    });
+  } catch (error) {
+    console.error("WebSocket emission error:", error);
+  }
+}
+
 export async function createUserNotification(input: {
   userId: string;
   type: NotificationType;
@@ -28,6 +48,9 @@ export async function createUserNotification(input: {
       metadata: input.metadata,
     },
   });
+
+  // Emit in real-time via WebSocket
+  await emitNotificationViaWebSocket(input.userId, result);
 
   revalidatePath("/overview");
   revalidatePath("/settings");
