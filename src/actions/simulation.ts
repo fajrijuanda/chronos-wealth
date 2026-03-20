@@ -65,6 +65,8 @@ type SimulatedEconomyContract = {
   payoutDay: number;
   capitalAmount: number;
   monthlyRevenue: number;
+  ownCapitalAmount: number;
+  patunganCapitalAmount: number;
 };
 
 const SALARY_DOUBLE_START_MONTH = new Date(2027, 4, 1);
@@ -364,6 +366,8 @@ async function simulateUserBoothPlan(input: {
     boothsAdded: number;
     totalBoothsEquivalent: number;
     boothsAvailableToBuy: number;
+    boothsAvailableWithPatungan: number;
+    boothPatunganShortage: number;
     monthEndCash: number;
     patunganTopUpApplied: number;
     contractEvents: ContractEvent[];
@@ -684,15 +688,25 @@ async function simulateUserBoothPlan(input: {
 
       if (boothActiveInMonth && monthsSincePurchase >= 1) {
         const payoutDay = clampDay(contract.payoutDay, 1, daysInMonth);
+        
+        // Calculate income split based on ownership percentages
+        const totalCapital = contract.capitalAmount;
+        const ownPct = totalCapital > 0 ? contract.ownCapitalAmount / totalCapital : 1;
+        const patunganPct = totalCapital > 0 ? contract.patunganCapitalAmount / totalCapital : 0;
+        
+        const ownIncome = contract.monthlyRevenue * ownPct;
+        const patunganIncome = contract.monthlyRevenue * patunganPct;
+        
         events.push({
           day: payoutDay,
           amount: contract.monthlyRevenue,
           label: `Sim Booth ${contract.id} payout`,
         });
         monthlyBoothIncome += contract.monthlyRevenue;
-        monthlyBoothIncomeOwn += contract.monthlyRevenue;
+        monthlyBoothIncomeOwn += ownIncome;
+        monthlyBoothIncomePatungan += patunganIncome;
         activeEquivalentFromOwned +=
-          revenuePerBooth > 0 ? contract.monthlyRevenue / revenuePerBooth : 0;
+          revenuePerBooth > 0 ? ownIncome / revenuePerBooth : 0;
       }
     }
 
@@ -769,13 +783,29 @@ async function simulateUserBoothPlan(input: {
 
     cash += incomeAfterPurchase;
     const cashBeforeExpense = cash;
-    const boothsAvailableToBuy =
-      boothPrice > 0 ? Math.floor(Math.max(0, openingBalanceForMonth - capitalUsed) / boothPrice) : 0;
+
+    // Calculate available booths from end cash (before expense)
+    const boothsAvailableToBuy = boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
+    const remainderAfterAvailableBooths = cashBeforeExpense - (boothsAvailableToBuy * boothPrice);
+    const boothsAvailableWithPatungan = remainderAfterAvailableBooths > 0 && remainderAfterAvailableBooths < boothPrice ? 1 : 0;
+    const boothPatunganShortage = boothsAvailableWithPatungan > 0 ? boothPrice - remainderAfterAvailableBooths : 0;
+
     cash -= monthlyExpense;
     previousMonthEndCash = cashBeforeExpense;
 
     for (let addedIndex = 0; addedIndex < boothsAdded; addedIndex++) {
       const simulatedPayoutDay = contractDayAfterPurchase(purchaseDay);
+      
+      // Calculate capital sources for this booth
+      // Booth is funded proportionally from own cash and patungan top-up
+      const openingBalanceForBoothFunding = openingBalanceForMonth;
+      const ownPct = openingBalanceForBoothFunding > 0 
+        ? previousMonthEndCash / openingBalanceForBoothFunding 
+        : 1;
+      const patunganPct = openingBalanceForBoothFunding > 0
+        ? patunganTopUpApplied / openingBalanceForBoothFunding
+        : 0;
+      
       simulatedEconomyContracts.push({
         id: simulatedContractId,
         purchasedAt: new Date(monthDate),
@@ -783,6 +813,8 @@ async function simulateUserBoothPlan(input: {
         payoutDay: simulatedPayoutDay,
         capitalAmount: boothPrice,
         monthlyRevenue: revenuePerBooth,
+        ownCapitalAmount: boothPrice * ownPct,
+        patunganCapitalAmount: boothPrice * patunganPct,
       });
       simulatedContractId += 1;
     }
@@ -813,6 +845,8 @@ async function simulateUserBoothPlan(input: {
       boothsAdded,
       totalBoothsEquivalent: incomeEquivalent,
       boothsAvailableToBuy,
+      boothsAvailableWithPatungan,
+      boothPatunganShortage,
       monthEndCash: cashBeforeExpense,
       patunganTopUpApplied,
       contractEvents,

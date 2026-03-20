@@ -38,6 +38,8 @@ type SimulationParticipant = {
     cashBeforePurchase: number;
     boothsAdded: number;
     boothsAvailableToBuy: number;
+    boothsAvailableWithPatungan: number;
+    boothPatunganShortage: number;
     monthlyIncome: number;
     monthlyExpense: number;
     monthlyBoothIncome: number;
@@ -543,7 +545,16 @@ export default async function SimulationPage({
                                 <span className="text-slate-500 dark:text-slate-400">-</span>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-blue-600 font-semibold">{plan.boothsAvailableToBuy}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-600 font-semibold">{plan.boothsAvailableToBuy}</span>
+                                {plan.boothsAvailableWithPatungan > 0 && (
+                                  <span className="text-orange-500 font-semibold">
+                                    +{plan.boothsAvailableWithPatungan}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthEndCash)}</td>
                           </tr>
                         );
