@@ -41,6 +41,17 @@ async function assertIncomeSourceAccess(incomeSourceId: string) {
 }
 
 export async function getIncomeSources() {
+  const { actor, isSuperAdmin } = await getSessionActor();
+  
+  if (!isSuperAdmin) {
+    // Non-admin users can only access their own income sources
+    return prisma.incomeSource.findMany({
+      where: { ownerUserId: actor.id, isActive: true },
+      orderBy: [{ payoutDate: "asc" }, { name: "asc" }],
+    });
+  }
+  
+  // Admin can see all income sources
   return await prisma.incomeSource.findMany({
     orderBy: { name: "asc" },
   });
