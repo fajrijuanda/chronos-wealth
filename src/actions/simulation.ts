@@ -669,14 +669,14 @@ async function simulateUserBoothPlan(input: {
       if (isRenewalMonth) {
         events.push({
           day: clampDay(contract.purchaseDay, 1, daysInMonth),
-          amount: contract.capitalAmount,
+          amount: contract.ownCapitalAmount,
           label: `Sim Booth ${contract.id} capital return`,
         });
 
         if (renewEconomyBoothContracts) {
           events.push({
             day: clampDay(contract.purchaseDay, 1, daysInMonth),
-            amount: -contract.capitalAmount,
+            amount: -contract.ownCapitalAmount,
             label: `Sim Booth ${contract.id} contract renewal`,
           });
         }
@@ -699,10 +699,10 @@ async function simulateUserBoothPlan(input: {
         
         events.push({
           day: payoutDay,
-          amount: contract.monthlyRevenue,
+          amount: ownIncome,
           label: `Sim Booth ${contract.id} payout`,
         });
-        monthlyBoothIncome += contract.monthlyRevenue;
+        monthlyBoothIncome += ownIncome;
         monthlyBoothIncomeOwn += ownIncome;
         monthlyBoothIncomePatungan += patunganIncome;
         activeEquivalentFromOwned +=
@@ -764,7 +764,7 @@ async function simulateUserBoothPlan(input: {
           type: "partner_suggestion_with_purchase",
         });
         pendingPatunganTopUp += shortage;
-      } else if (boothsAdded === 0 && openingBalanceForMonth > 0 && openingBalanceForMonth < boothPrice) {
+      } else if (boothsAdded === 0 && openingBalanceForMonth < boothPrice) {
         const shortage = boothPrice - openingBalanceForMonth;
         contractEvents.push({
           day: purchaseDay,
@@ -793,18 +793,21 @@ async function simulateUserBoothPlan(input: {
     cash -= monthlyExpense;
     previousMonthEndCash = cashBeforeExpense;
 
+    let cumulativeOwnUsed = 0;
+    let cumulativePatunganUsed = 0;
+
     for (let addedIndex = 0; addedIndex < boothsAdded; addedIndex++) {
       const simulatedPayoutDay = contractDayAfterPurchase(purchaseDay);
       
-      // Calculate capital sources for this booth
-      // Booth is funded proportionally from own cash and patungan top-up
-      const openingBalanceForBoothFunding = openingBalanceForMonth;
-      const ownPct = openingBalanceForBoothFunding > 0 
-        ? previousMonthEndCash / openingBalanceForBoothFunding 
-        : 1;
-      const patunganPct = openingBalanceForBoothFunding > 0
-        ? patunganTopUpApplied / openingBalanceForBoothFunding
-        : 0;
+      // Allocate capital sources sequentially:
+      // - First booth(s) from own cash
+      // - Remaining booth(s) from patungan top-up
+      const availableOwn = Math.max(0, previousMonthEndCash - cumulativeOwnUsed);
+      const ownForThisBooth = Math.min(boothPrice, availableOwn);
+      const patunganForThisBooth = boothPrice - ownForThisBooth;
+      
+      cumulativeOwnUsed += ownForThisBooth;
+      cumulativePatunganUsed += patunganForThisBooth;
       
       simulatedEconomyContracts.push({
         id: simulatedContractId,
@@ -813,8 +816,8 @@ async function simulateUserBoothPlan(input: {
         payoutDay: simulatedPayoutDay,
         capitalAmount: boothPrice,
         monthlyRevenue: revenuePerBooth,
-        ownCapitalAmount: boothPrice * ownPct,
-        patunganCapitalAmount: boothPrice * patunganPct,
+        ownCapitalAmount: ownForThisBooth,
+        patunganCapitalAmount: patunganForThisBooth,
       });
       simulatedContractId += 1;
     }
