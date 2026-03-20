@@ -37,7 +37,8 @@ function ensurePositive(value: number, fieldName: string) {
 }
 
 function computeBoothRecurringPayoutDay(mouSignedAt: Date, packageType: BoothPackageType) {
-  const mouDay = mouSignedAt.getDate();
+  // Use UTC day to avoid deployment timezone shifting the payout schedule by 1 day.
+  const mouDay = mouSignedAt.getUTCDate();
   if (packageType === BoothPackageType.EXCLUSIVE) {
     return mouDay;
   }
