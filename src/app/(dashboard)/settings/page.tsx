@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SlidersHorizontal, Flag, Users, Shield } from "lucide-react";
+import { formatGroupedNumber } from "@/lib/number-format";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,16 @@ export default async function SettingsPage({
     getUserConnectionDirectoryByEmail(activeEmail),
     getCollaborationWorkspace(activeEmail),
   ]);
+
+  const connectionSummary = directory.reduce(
+    (acc, entry) => {
+      if (entry.relationship === "ACCEPTED") acc.connected += 1;
+      if (entry.relationship === "PENDING_IN") acc.pendingIn += 1;
+      if (entry.relationship === "PENDING_OUT") acc.pendingOut += 1;
+      return acc;
+    },
+    { connected: 0, pendingIn: 0, pendingOut: 0 },
+  );
 
   async function saveFinance(formData: FormData) {
     "use server";
@@ -148,6 +159,27 @@ export default async function SettingsPage({
             <h2 className="font-display text-xl font-semibold">Simulation Finance</h2>
           </div>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Expense Range</p>
+              <p className="mt-1 text-lg font-semibold">
+                Rp {formatGroupedNumber(workspace.financeProfile?.monthlyExpenseMin ?? 0)} - Rp {formatGroupedNumber(workspace.financeProfile?.monthlyExpenseMax ?? 0)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Opening Balance</p>
+              <p className="mt-1 text-lg font-semibold">Rp {formatGroupedNumber(workspace.financeProfile?.openingBalance ?? 0)}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Idle Cash Target</p>
+              <p className="mt-1 text-lg font-semibold">Rp {formatGroupedNumber(workspace.financeProfile?.idleCashTarget ?? 1_000_000_000)}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-sky-200/70 bg-sky-50/60 p-4 text-sm text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/25 dark:text-sky-200">
+            Atur parameter ini untuk mempengaruhi simulasi cashflow bulanan dan ritme pembelian booth.
+          </div>
+
           <form action={saveFinance} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -209,6 +241,21 @@ export default async function SettingsPage({
             <h2 className="font-display text-xl font-semibold">Portfolio & Target Goals</h2>
           </div>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Current Booth Base Price</p>
+              <p className="mt-1 text-lg font-semibold">Rp {formatGroupedNumber(workspace.currentUser.boothBasePrice)}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Monthly Target Income</p>
+              <p className="mt-1 text-lg font-semibold">Rp {formatGroupedNumber(workspace.targetProgress.targetIncome ?? 0)}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200">
+            Sesuaikan target booth equivalent dan revenue per booth untuk menjaga milestone pertumbuhan tetap realistis.
+          </div>
+
           <form action={saveGoals} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="settings-booth-base-price" className="text-sm font-medium">Booth Base Price</label>
@@ -234,6 +281,25 @@ export default async function SettingsPage({
               <Users className="w-5 h-5 text-violet-600 dark:text-violet-300" />
             </div>
             <h2 className="font-display text-xl font-semibold">Connections</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Connected</p>
+              <p className="mt-1 text-2xl font-semibold">{connectionSummary.connected}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Incoming Requests</p>
+              <p className="mt-1 text-2xl font-semibold">{connectionSummary.pendingIn}</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Outgoing Requests</p>
+              <p className="mt-1 text-2xl font-semibold">{connectionSummary.pendingOut}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-violet-200/70 bg-violet-50/60 p-4 text-sm text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/25 dark:text-violet-200">
+            Tip: Prioritaskan koneksi yang relevan untuk simulasi partner dan kolaborasi target jangka panjang.
           </div>
 
           <div className="space-y-3">
@@ -309,9 +375,24 @@ export default async function SettingsPage({
             <h2 className="font-display text-xl font-semibold">Session & Security</h2>
           </div>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Active Session</p>
+              <p className="mt-1 text-lg font-semibold">1 Device</p>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Account Status</p>
+              <p className="mt-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">Secure</p>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-border p-4">
             <p className="text-sm text-muted-foreground">Current signed-in email</p>
             <p className="font-semibold mt-1">{currentUser.email}</p>
+          </div>
+
+          <div className="rounded-2xl border border-rose-200/70 bg-rose-50/60 p-4 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/25 dark:text-rose-200">
+            Logout akan menghapus sesi aktif di browser ini. Pastikan data perubahan sudah tersimpan sebelum keluar.
           </div>
 
           <form action={logoutAction}>
