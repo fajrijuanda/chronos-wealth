@@ -48,7 +48,8 @@ type ContractEventType =
   | "renewal"
   | "takeover"
   | "ended"
-  | "partner_suggestion";
+  | "partner_suggestion_with_purchase"
+  | "partner_suggestion_without_purchase";
 
 type ContractEvent = {
   day: number;
@@ -84,6 +85,14 @@ function monthKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth() + 1}`;
 }
 
+function normalizeBoothIncomeKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\(\s*booth\s*\)/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function getBoothPayoutDay(packageType: BoothPackageType, mouSignedAt: Date) {
   const baseDay = getDate(mouSignedAt);
   const offset = packageType === BoothPackageType.EXCLUSIVE ? 0 : 1;
@@ -98,7 +107,7 @@ function getBoothCommissionDay(mouSignedAt: Date, daysInMonth: number) {
 
 function getContractEventType(label: string): ContractEventType | null {
   if (/patungan|partner/i.test(label)) {
-    return "partner_suggestion";
+    return "partner_suggestion_without_purchase";
   }
 
   if (/capital return/i.test(label)) {
@@ -260,9 +269,14 @@ async function simulateUserBoothPlan(input: {
   const boothIncomeStartDates = new Map<string, Date>();
   for (const income of incomeSources) {
     if (income.category === CategoryType.BOOTH && income.expectedDate) {
-      boothIncomeStartDates.set(income.name, income.expectedDate);
+      const incomeKey = normalizeBoothIncomeKey(income.name);
+      const existingDate = boothIncomeStartDates.get(incomeKey);
+      if (!existingDate || income.expectedDate < existingDate) {
+        boothIncomeStartDates.set(incomeKey, income.expectedDate);
+      }
     }
   }
+  const boothIncomeStartDateEntries = Array.from(boothIncomeStartDates.entries());
 
   const revenuePerBooth = target?.revenuePerBooth ?? input.simUser.revenuePerBooth;
   const targetBoothEquivalent = target?.targetBoothEquivalent ?? 0;
@@ -354,7 +368,7 @@ async function simulateUserBoothPlan(input: {
 
   const start = startOfMonth(input.startDate);
   const totalMonths = differenceInMonths(startOfMonth(input.targetDate), start);
-  let previousMonthEndCash = 0;
+  let previousMonthEndCash = cash;
 
   for (let i = 0; i <= totalMonths; i++) {
     const monthDate = addMonths(start, i);
@@ -565,7 +579,14 @@ async function simulateUserBoothPlan(input: {
 
       // Booth income starts from the month after MoU (not in signing month).
       // But if booth has expected start date from IncomeSource, use that instead.
-      const expectedIncomeDate = boothIncomeStartDates.get(booth.name);
+      const boothKey = normalizeBoothIncomeKey(booth.name);
+      let expectedIncomeDate = boothIncomeStartDates.get(boothKey);
+      if (!expectedIncomeDate) {
+        const fallback = boothIncomeStartDateEntries.find(
+          ([incomeKey]) => incomeKey.includes(boothKey) || boothKey.includes(incomeKey),
+        );
+        expectedIncomeDate = fallback?.[1];
+      }
       const incomeStartMonth = expectedIncomeDate ? startOfMonth(expectedIncomeDate) : null;
       const shouldIncludeIncome = incomeStartMonth
         ? startOfMonth(monthDate) >= incomeStartMonth
@@ -691,29 +712,42 @@ async function simulateUserBoothPlan(input: {
       .filter((event): event is ContractEvent => event !== null);
     const incomeAfterPurchase = totalMonthEventsIncome - incomeBeforePurchase;
 
-    cash += incomeBeforePurchase;
-    const cashBeforePurchase = cash;
+    const openingBalanceForMonth = previousMonthEndCash;
+    cash = openingBalanceForMonth + incomeBeforePurchase;
+    const cashBeforePurchase = openingBalanceForMonth;
 
     const reserveGuard = idleCashTarget;
     const remainingBoothNeed = Math.max(
       0,
       targetBoothEquivalent > 0 ? targetBoothEquivalent - boothEquivalentOwned : Number.POSITIVE_INFINITY,
     );
-    const maxBoothByCash = boothPrice > 0 ? Math.floor(previousMonthEndCash / boothPrice) : 0;
+    const maxBoothByCash = boothPrice > 0 ? Math.floor(openingBalanceForMonth / boothPrice) : 0;
     const boothsAdded =
       targetBoothEquivalent > 0
         ? Math.min(maxBoothByCash, Math.floor(remainingBoothNeed))
         : maxBoothByCash;
     const capitalUsed = boothsAdded * boothPrice;
 
-    const cashRemainderFromPreviousMonth = Math.max(0, previousMonthEndCash - capitalUsed);
-    if (boothPrice > 0 && cashRemainderFromPreviousMonth >= boothPrice / 2) {
-      contractEvents.push({
-        day: purchaseDay,
-        amount: 0,
-        label: `Saran patungan partner: sisa end-cash bulan lalu Rp ${formatGroupedNumber(cashRemainderFromPreviousMonth)}`,
-        type: "partner_suggestion",
-      });
+    const cashRemainderFromPreviousMonth = Math.max(0, openingBalanceForMonth - capitalUsed);
+
+    if (boothPrice > 0) {
+      if (boothsAdded > 0 && cashRemainderFromPreviousMonth > 0 && cashRemainderFromPreviousMonth < boothPrice) {
+        const shortage = boothPrice - cashRemainderFromPreviousMonth;
+        contractEvents.push({
+          day: purchaseDay,
+          amount: shortage,
+          label: `Saran patungan partner (setelah beli): kurang Rp ${formatGroupedNumber(shortage)} untuk 1 booth tambahan`,
+          type: "partner_suggestion_with_purchase",
+        });
+      } else if (boothsAdded === 0 && openingBalanceForMonth > 0 && openingBalanceForMonth < boothPrice) {
+        const shortage = boothPrice - openingBalanceForMonth;
+        contractEvents.push({
+          day: purchaseDay,
+          amount: shortage,
+          label: `Saran patungan partner (belum beli): kurang Rp ${formatGroupedNumber(shortage)} untuk 1 booth`,
+          type: "partner_suggestion_without_purchase",
+        });
+      }
     }
 
     cash -= capitalUsed;
@@ -723,7 +757,8 @@ async function simulateUserBoothPlan(input: {
 
     cash += incomeAfterPurchase;
     const cashBeforeExpense = cash;
-    const boothsAvailableToBuy = boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
+    const boothsAvailableToBuy =
+      boothPrice > 0 ? Math.floor(Math.max(0, openingBalanceForMonth - capitalUsed) / boothPrice) : 0;
     cash -= monthlyExpense;
     previousMonthEndCash = cashBeforeExpense;
 
@@ -935,14 +970,14 @@ export async function simulateCollaborativeGrowth(input: {
           day: primaryPlan.purchaseDay,
           amount: 0,
           label: collabLabel,
-          type: "partner_suggestion",
+          type: "partner_suggestion_with_purchase",
         });
 
         partnerPlan.contractEvents.push({
           day: partnerPlan.purchaseDay,
           amount: 0,
           label: collabLabel,
-          type: "partner_suggestion",
+          type: "partner_suggestion_with_purchase",
         });
 
         // Collaborative purchase is assigned to user with the cheapest booth base price.

@@ -10,13 +10,21 @@ import { SimulationControlPanel } from "./SimulationControlPanel";
 type SingleSimulation = Awaited<ReturnType<typeof simulateSingleUserGrowth>>;
 type CollaborativeSimulation = Awaited<ReturnType<typeof simulateCollaborativeGrowth>>;
 
-type EventFilter = "all" | "renewal" | "capital_return" | "takeover" | "ended" | "partner_suggestion";
+type EventFilter =
+  | "all"
+  | "renewal"
+  | "capital_return"
+  | "takeover"
+  | "ended"
+  | "partner_suggestion_with_purchase"
+  | "partner_suggestion_without_purchase";
 type CsvDelimiter = "comma" | "semicolon";
 type SimulationParticipant = {
   userId: string;
   displayName: string;
   email: string;
   boothPrice: number;
+  revenuePerBooth: number;
   monthlyExpense: number;
   purchaseTiming: "START_OF_MONTH" | "END_OF_MONTH";
   idleCashTarget: number;
@@ -56,7 +64,9 @@ function getEventBadgeClass(eventType: EventFilter) {
       return "bg-indigo-100 text-indigo-800 border-indigo-200";
     case "ended":
       return "bg-rose-100 text-rose-800 border-rose-200";
-    case "partner_suggestion":
+    case "partner_suggestion_with_purchase":
+      return "bg-sky-100 text-sky-800 border-sky-200";
+    case "partner_suggestion_without_purchase":
       return "bg-sky-100 text-sky-800 border-sky-200";
     default:
       return "bg-slate-100 text-slate-700 border-slate-200";
@@ -73,8 +83,10 @@ function getEventTypeLabel(eventType: EventFilter) {
       return "Takeover";
     case "ended":
       return "Ended";
-    case "partner_suggestion":
-      return "Patungan Suggestion";
+    case "partner_suggestion_with_purchase":
+      return "Patungan (Beli Booth)";
+    case "partner_suggestion_without_purchase":
+      return "Patungan (Belum Beli)";
     default:
       return "All";
   }
@@ -98,7 +110,8 @@ function getEventSummary(
     capital_return: 0,
     takeover: 0,
     ended: 0,
-    partner_suggestion: 0,
+    partner_suggestion_with_purchase: 0,
+    partner_suggestion_without_purchase: 0,
   };
 
   for (const plan of plans) {
@@ -212,7 +225,8 @@ export default async function SimulationPage({
     eventFilterRaw === "capital_return" ||
     eventFilterRaw === "takeover" ||
     eventFilterRaw === "ended" ||
-    eventFilterRaw === "partner_suggestion"
+    eventFilterRaw === "partner_suggestion_with_purchase" ||
+    eventFilterRaw === "partner_suggestion_without_purchase"
       ? eventFilterRaw
       : "all";
   const delimiter: CsvDelimiter = delimiterRaw === "semicolon" ? "semicolon" : "comma";
@@ -360,8 +374,13 @@ export default async function SimulationPage({
                     <p className="text-income font-bold">Rp {formatGroupedNumber(user.projectedMonthlyIncome)}</p>
                   </div>
                   <div className="surface-card-soft px-3 py-2 sm:col-span-2">
-                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Target Income Eq.</p>
-                    <p className="font-bold">{user.targetBoothEquivalent}</p>
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Target Booth</p>
+                    <p className="font-bold">
+                      {formatUnitTotal(user.targetBoothEquivalent)} Booth
+                      {user.targetBoothEquivalent > 0
+                        ? ` (Rp ${formatGroupedNumber(user.targetBoothEquivalent * user.revenuePerBooth)})`
+                        : ""}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -387,6 +406,10 @@ export default async function SimulationPage({
         <div className={`grid grid-cols-1 gap-6 ${participants.length > 1 ? "xl:grid-cols-2" : ""}`}>
           {participants.map((user) => {
             const eventSummary = getEventSummary(user.plans);
+            const targetReachedIndex =
+              user.targetBoothEquivalent > 0
+                ? user.plans.findIndex((plan) => plan.unitTotalOwned >= user.targetBoothEquivalent)
+                : -1;
             const csvContent = buildContractEventsCsv({
               userDisplayName: user.displayName,
               userEmail: user.email,
@@ -423,7 +446,10 @@ export default async function SimulationPage({
                       Ended: {eventSummary.ended}
                     </span>
                     <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-100 px-2 py-1 text-sky-800">
-                      Patungan: {eventSummary.partner_suggestion}
+                      Patungan Beli: {eventSummary.partner_suggestion_with_purchase}
+                    </span>
+                    <span className="inline-flex items-center rounded-md border border-cyan-200 bg-cyan-100 px-2 py-1 text-cyan-800">
+                      Patungan Belum Beli: {eventSummary.partner_suggestion_without_purchase}
                     </span>
                   </div>
                 </div>
@@ -447,15 +473,28 @@ export default async function SimulationPage({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {user.plans.map((plan) => {
+                      {user.plans.map((plan, index) => {
+                        const isTargetReachedRow = index === targetReachedIndex;
                         const filteredEvents =
                           eventFilter === "all"
                             ? plan.contractEvents
                             : plan.contractEvents.filter((event) => event.type === eventFilter);
 
                         return (
-                          <tr key={`${user.userId}-${plan.month}`}>
-                            <td className="px-3 py-2">{plan.month}</td>
+                          <tr
+                            key={`${user.userId}-${plan.month}`}
+                            className={isTargetReachedRow ? "bg-emerald-50/70 dark:bg-emerald-900/20" : undefined}
+                          >
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span>{plan.month}</span>
+                                {isTargetReachedRow ? (
+                                  <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                    Target Tercapai
+                                  </span>
+                                ) : null}
+                              </div>
+                            </td>
                             <td className="px-3 py-2">{formatUnitTotal(plan.unitTotalOwned)}</td>
                             <td className="px-3 py-2 text-slate-600 dark:text-slate-400">Rp {formatGroupedNumber(plan.cashBeforePurchase)}</td>
                             <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
@@ -473,7 +512,7 @@ export default async function SimulationPage({
                                       className={`inline-flex items-center rounded-md border px-2 py-1 ${getEventBadgeClass(event.type)}`}
                                       title={formatContractEvent(event)}
                                     >
-                                      {getEventTypeLabel(event.type)} {event.type === "partner_suggestion" && event.amount > 0 ? `(Rp ${formatGroupedNumber(event.amount)})` : ''} H{event.day}
+                                      {getEventTypeLabel(event.type)} {(event.type === "partner_suggestion_with_purchase" || event.type === "partner_suggestion_without_purchase") && event.amount > 0 ? `(Rp ${formatGroupedNumber(event.amount)})` : ""} H{event.day}
                                     </span>
                                   ))}
                                 </div>

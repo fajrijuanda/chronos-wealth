@@ -21,7 +21,8 @@ type EventFilter =
   | "capital_return"
   | "takeover"
   | "ended"
-  | "partner_suggestion";
+  | "partner_suggestion_with_purchase"
+  | "partner_suggestion_without_purchase";
 
 type CsvDelimiter = "comma" | "semicolon";
 
@@ -224,7 +225,8 @@ export function SimulationControlPanel(props: {
             <SelectItem value="capital_return" className="rounded-xl">Capital Return</SelectItem>
             <SelectItem value="takeover" className="rounded-xl">Takeover</SelectItem>
             <SelectItem value="ended" className="rounded-xl">Ended</SelectItem>
-            <SelectItem value="partner_suggestion" className="rounded-xl">Patungan Suggestion</SelectItem>
+            <SelectItem value="partner_suggestion_with_purchase" className="rounded-xl">Patungan (Beli Booth)</SelectItem>
+            <SelectItem value="partner_suggestion_without_purchase" className="rounded-xl">Patungan (Belum Beli)</SelectItem>
           </SelectContent>
         </Select>
       </div>
