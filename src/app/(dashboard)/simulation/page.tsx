@@ -10,7 +10,7 @@ import { SimulationControlPanel } from "./SimulationControlPanel";
 type SingleSimulation = Awaited<ReturnType<typeof simulateSingleUserGrowth>>;
 type CollaborativeSimulation = Awaited<ReturnType<typeof simulateCollaborativeGrowth>>;
 
-type EventFilter = "all" | "renewal" | "capital_return" | "takeover" | "ended";
+type EventFilter = "all" | "renewal" | "capital_return" | "takeover" | "ended" | "partner_suggestion";
 type CsvDelimiter = "comma" | "semicolon";
 type SimulationParticipant = {
   userId: string;
@@ -53,6 +53,8 @@ function getEventBadgeClass(eventType: EventFilter) {
       return "bg-indigo-100 text-indigo-800 border-indigo-200";
     case "ended":
       return "bg-rose-100 text-rose-800 border-rose-200";
+    case "partner_suggestion":
+      return "bg-sky-100 text-sky-800 border-sky-200";
     default:
       return "bg-slate-100 text-slate-700 border-slate-200";
   }
@@ -68,6 +70,8 @@ function getEventTypeLabel(eventType: EventFilter) {
       return "Takeover";
     case "ended":
       return "Ended";
+    case "partner_suggestion":
+      return "Patungan Suggestion";
     default:
       return "All";
   }
@@ -91,6 +95,7 @@ function getEventSummary(
     capital_return: 0,
     takeover: 0,
     ended: 0,
+    partner_suggestion: 0,
   };
 
   for (const plan of plans) {
@@ -188,7 +193,8 @@ export default async function SimulationPage({
     eventFilterRaw === "renewal" ||
     eventFilterRaw === "capital_return" ||
     eventFilterRaw === "takeover" ||
-    eventFilterRaw === "ended"
+    eventFilterRaw === "ended" ||
+    eventFilterRaw === "partner_suggestion"
       ? eventFilterRaw
       : "all";
   const delimiter: CsvDelimiter = delimiterRaw === "semicolon" ? "semicolon" : "comma";
@@ -378,6 +384,9 @@ export default async function SimulationPage({
                     </span>
                     <span className="inline-flex items-center rounded-md border border-rose-200 bg-rose-100 px-2 py-1 text-rose-800">
                       Ended: {eventSummary.ended}
+                    </span>
+                    <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-100 px-2 py-1 text-sky-800">
+                      Patungan: {eventSummary.partner_suggestion}
                     </span>
                   </div>
                 </div>

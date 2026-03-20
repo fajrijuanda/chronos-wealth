@@ -20,7 +20,8 @@ type EventFilter =
   | "renewal"
   | "capital_return"
   | "takeover"
-  | "ended";
+  | "ended"
+  | "partner_suggestion";
 
 type CsvDelimiter = "comma" | "semicolon";
 
@@ -77,7 +78,7 @@ export function SimulationControlPanel(props: {
   };
 
   return (
-    <div className="surface-card p-6 h-fit space-y-5 lg:sticky lg:top-20">
+    <div className="surface-card relative z-40 p-6 h-fit space-y-5 lg:sticky lg:top-20">
       <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
           <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -153,6 +154,7 @@ export function SimulationControlPanel(props: {
             <SelectItem value="capital_return" className="rounded-xl">Capital Return</SelectItem>
             <SelectItem value="takeover" className="rounded-xl">Takeover</SelectItem>
             <SelectItem value="ended" className="rounded-xl">Ended</SelectItem>
+            <SelectItem value="partner_suggestion" className="rounded-xl">Patungan Suggestion</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 import { BoothPackageType, BoothPurchaseTiming, CategoryType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { formatGroupedNumber } from "@/lib/number-format";
 import { getDashboardMetrics } from "./transaction";
 import { ensureAppUserByEmail } from "./collaboration";
 import { getIncomeSourcesByUserId } from "./income";
@@ -40,7 +41,8 @@ type ContractEventType =
   | "capital_return"
   | "renewal"
   | "takeover"
-  | "ended";
+  | "ended"
+  | "partner_suggestion";
 
 type ContractEvent = {
   day: number;
@@ -70,6 +72,10 @@ function getBoothCommissionDay(mouSignedAt: Date, daysInMonth: number) {
 }
 
 function getContractEventType(label: string): ContractEventType | null {
+  if (/patungan|partner/i.test(label)) {
+    return "partner_suggestion";
+  }
+
   if (/capital return/i.test(label)) {
     return "capital_return";
   }
@@ -297,6 +303,7 @@ async function simulateUserBoothPlan(input: {
 
   const start = startOfMonth(new Date());
   const totalMonths = differenceInMonths(startOfMonth(input.targetDate), start);
+  let previousMonthEndCash = 0;
 
   for (let i = 0; i <= totalMonths; i++) {
     const monthDate = addMonths(start, i);
@@ -317,6 +324,7 @@ async function simulateUserBoothPlan(input: {
 
     const events: DatedEvent[] = [];
     let monthlyNonBoothIncome = 0;
+    let monthlyCommissionIncome = 0;
 
     for (const income of incomeSources) {
       if (income.category === CategoryType.BOOTH) {
@@ -351,7 +359,11 @@ async function simulateUserBoothPlan(input: {
           amount: income.amount,
           label: income.name,
         });
-        monthlyNonBoothIncome += income.amount;
+        if (income.category === CategoryType.COMMISSION) {
+          monthlyCommissionIncome += income.amount;
+        } else {
+          monthlyNonBoothIncome += income.amount;
+        }
         continue;
       }
 
@@ -361,12 +373,15 @@ async function simulateUserBoothPlan(input: {
           amount: income.amount,
           label: income.name,
         });
-        monthlyNonBoothIncome += income.amount;
+        if (income.category === CategoryType.COMMISSION) {
+          monthlyCommissionIncome += income.amount;
+        } else {
+          monthlyNonBoothIncome += income.amount;
+        }
       }
     }
 
     let monthlyBoothIncome = 0;
-    let monthlyCommissionIncome = 0;
     let activeEquivalentFromOwned = 0;
 
     for (const ownership of ownerships) {
@@ -452,7 +467,8 @@ async function simulateUserBoothPlan(input: {
         }
       }
 
-      if (boothActiveInMonth) {
+      // Booth income starts from the month after MoU (not in signing month).
+      if (boothActiveInMonth && monthsSinceMou >= 1) {
         const extraUnits = exclusiveExtraUnitsByOwnershipId.get(ownership.id) ?? 0;
         const effectiveUnits = booth.boothUnitCount + extraUnits;
         const incomeAmount =
@@ -498,7 +514,7 @@ async function simulateUserBoothPlan(input: {
       .reduce((acc, event) => acc + event.amount, 0);
 
     const totalMonthEventsIncome = events.reduce((acc, event) => acc + event.amount, 0);
-    const contractEvents = events
+    const contractEvents: ContractEvent[] = events
       .map((event) => {
         const eventType = getContractEventType(event.label);
         if (!eventType) {
@@ -519,20 +535,26 @@ async function simulateUserBoothPlan(input: {
     const cashBeforePurchase = cash;
 
     const reserveGuard = idleCashTarget;
-    const safeCashForBooth = Math.max(
-      0,
-      cashBeforePurchase - monthlyExpense - reserveGuard,
-    );
     const remainingBoothNeed = Math.max(
       0,
       targetBoothEquivalent > 0 ? targetBoothEquivalent - boothEquivalentOwned : Number.POSITIVE_INFINITY,
     );
-    const maxBoothByCash = boothPrice > 0 ? Math.floor(safeCashForBooth / boothPrice) : 0;
+    const maxBoothByCash = boothPrice > 0 ? Math.floor(previousMonthEndCash / boothPrice) : 0;
     const boothsAdded =
       targetBoothEquivalent > 0
         ? Math.min(maxBoothByCash, Math.floor(remainingBoothNeed))
         : maxBoothByCash;
     const capitalUsed = boothsAdded * boothPrice;
+
+    const cashRemainderFromPreviousMonth = Math.max(0, previousMonthEndCash - capitalUsed);
+    if (boothPrice > 0 && cashRemainderFromPreviousMonth >= boothPrice / 2) {
+      contractEvents.push({
+        day: purchaseDay,
+        amount: 0,
+        label: `Saran patungan partner: sisa end-cash bulan lalu Rp ${formatGroupedNumber(cashRemainderFromPreviousMonth)}`,
+        type: "partner_suggestion",
+      });
+    }
 
     cash -= capitalUsed;
 
@@ -541,6 +563,7 @@ async function simulateUserBoothPlan(input: {
 
     cash += incomeAfterPurchase;
     cash -= monthlyExpense;
+    previousMonthEndCash = cash;
 
     simulatedEquivalentAdded += boothsAdded;
     boothEquivalentOwned = activeEquivalentFromOwned + simulatedEquivalentAdded;
@@ -629,8 +652,146 @@ export async function simulateCollaborativeGrowth(input: {
     }),
   ]);
 
+  const monthCount = Math.min(primary.plans.length, partner.plans.length);
+  let primaryCashOffset = 0;
+  let partnerCashOffset = 0;
+  const ownerIsPrimary = primary.boothPrice <= partner.boothPrice;
+  const collabBoothPrice = ownerIsPrimary ? primary.boothPrice : partner.boothPrice;
+  const collabRevenuePerBooth = ownerIsPrimary ? primary.revenuePerBooth : partner.revenuePerBooth;
+  type CollabBoothShare = {
+    primaryShare: number;
+    partnerShare: number;
+    monthlyRevenue: number;
+  };
+  const activeCollabBooths: CollabBoothShare[] = [];
+  const pendingCollabBooths: CollabBoothShare[] = [];
+
+  for (let monthIndex = 0; monthIndex < monthCount; monthIndex++) {
+    const primaryPlan = primary.plans[monthIndex];
+    const partnerPlan = partner.plans[monthIndex];
+
+    if (primaryCashOffset !== 0) {
+      primaryPlan.cashBeforePurchase += primaryCashOffset;
+      primaryPlan.monthEndCash += primaryCashOffset;
+    }
+
+    if (partnerCashOffset !== 0) {
+      partnerPlan.cashBeforePurchase += partnerCashOffset;
+      partnerPlan.monthEndCash += partnerCashOffset;
+    }
+
+    if (activeCollabBooths.length > 0) {
+      let primaryCollabIncome = 0;
+      let partnerCollabIncome = 0;
+
+      for (const boothShare of activeCollabBooths) {
+        primaryCollabIncome += boothShare.monthlyRevenue * boothShare.primaryShare;
+        partnerCollabIncome += boothShare.monthlyRevenue * boothShare.partnerShare;
+      }
+
+      if (primaryCollabIncome > 0) {
+        primaryPlan.monthlyBoothIncome += primaryCollabIncome;
+        primaryPlan.monthlyIncome += primaryCollabIncome;
+        primaryPlan.totalBoothsEquivalent =
+          primary.revenuePerBooth > 0 ? primaryPlan.monthlyIncome / primary.revenuePerBooth : 0;
+        primaryPlan.monthEndCash += primaryCollabIncome;
+      }
+
+      if (partnerCollabIncome > 0) {
+        partnerPlan.monthlyBoothIncome += partnerCollabIncome;
+        partnerPlan.monthlyIncome += partnerCollabIncome;
+        partnerPlan.totalBoothsEquivalent =
+          partner.revenuePerBooth > 0 ? partnerPlan.monthlyIncome / partner.revenuePerBooth : 0;
+        partnerPlan.monthEndCash += partnerCollabIncome;
+      }
+    }
+
+    if (monthIndex > 0) {
+      const primaryPrevCash = primary.plans[monthIndex - 1].monthEndCash;
+      const partnerPrevCash = partner.plans[monthIndex - 1].monthEndCash;
+      const requiredCapital = collabBoothPrice;
+      const combinedAvailable = primaryPrevCash + partnerPrevCash;
+
+      if (requiredCapital > 0 && combinedAvailable >= requiredCapital) {
+        const primaryWeight = combinedAvailable > 0 ? primaryPrevCash / combinedAvailable : 0.5;
+        let primaryContribution = Math.max(0, Math.min(primaryPrevCash, requiredCapital * primaryWeight));
+        let partnerContribution = Math.max(0, requiredCapital - primaryContribution);
+
+        if (partnerContribution > partnerPrevCash) {
+          const shortage = partnerContribution - partnerPrevCash;
+          partnerContribution = partnerPrevCash;
+          primaryContribution = Math.min(primaryPrevCash, primaryContribution + shortage);
+        }
+
+        if (primaryContribution > primaryPrevCash) {
+          const shortage = primaryContribution - primaryPrevCash;
+          primaryContribution = primaryPrevCash;
+          partnerContribution = Math.min(partnerPrevCash, partnerContribution + shortage);
+        }
+
+        const partnerDominant = partnerPrevCash > primaryPrevCash;
+        const ownerLabel = ownerIsPrimary ? "primary" : "partner";
+        const primaryShare = requiredCapital > 0 ? primaryContribution / requiredCapital : 0;
+        const partnerShare = requiredCapital > 0 ? partnerContribution / requiredCapital : 0;
+        const primarySharePct = (primaryShare * 100).toFixed(1);
+        const partnerSharePct = (partnerShare * 100).toFixed(1);
+
+        const collabLabel =
+          `Patungan disetujui (booth termurah: ${ownerLabel}): primary Rp ${formatGroupedNumber(primaryContribution)}, ` +
+          `partner Rp ${formatGroupedNumber(partnerContribution)} | sharing primary ${primarySharePct}%, partner ${partnerSharePct}%` +
+          (partnerDominant ? " (partner share lebih besar)" : "");
+
+        primaryPlan.contractEvents.push({
+          day: primaryPlan.purchaseDay,
+          amount: 0,
+          label: collabLabel,
+          type: "partner_suggestion",
+        });
+
+        partnerPlan.contractEvents.push({
+          day: partnerPlan.purchaseDay,
+          amount: 0,
+          label: collabLabel,
+          type: "partner_suggestion",
+        });
+
+        // Collaborative purchase is assigned to user with the cheapest booth base price.
+        if (ownerIsPrimary) {
+          primaryPlan.boothsAdded += 1;
+        } else {
+          partnerPlan.boothsAdded += 1;
+        }
+        primaryCashOffset -= primaryContribution;
+        partnerCashOffset -= partnerContribution;
+        primaryPlan.monthEndCash -= primaryContribution;
+        partnerPlan.monthEndCash -= partnerContribution;
+
+        // New collaborative booth contributes recurring income from next month,
+        // split by each user's capital sharing percentage.
+        pendingCollabBooths.push({
+          primaryShare,
+          partnerShare,
+          monthlyRevenue: collabRevenuePerBooth,
+        });
+      }
+    }
+
+    if (pendingCollabBooths.length > 0) {
+      activeCollabBooths.push(...pendingCollabBooths);
+      pendingCollabBooths.length = 0;
+    }
+  }
+
+  const primaryLatest = primary.plans[primary.plans.length - 1];
+  const partnerLatest = partner.plans[partner.plans.length - 1];
+  primary.projectedMonthlyIncome = primaryLatest?.monthlyIncome ?? primary.projectedMonthlyIncome;
+  partner.projectedMonthlyIncome = partnerLatest?.monthlyIncome ?? partner.projectedMonthlyIncome;
+
   const totalProjectedIncome =
     primary.projectedMonthlyIncome + partner.projectedMonthlyIncome;
+  const totalBoothEquivalent =
+    (primaryLatest?.totalBoothsEquivalent ?? primary.boothEquivalentOwned) +
+    (partnerLatest?.totalBoothsEquivalent ?? partner.boothEquivalentOwned);
 
   return {
     targetDate: input.targetDate,
@@ -638,8 +799,7 @@ export async function simulateCollaborativeGrowth(input: {
     partner,
     combined: {
       totalProjectedIncome,
-      totalBoothEquivalent:
-        primary.boothEquivalentOwned + partner.boothEquivalentOwned,
+      totalBoothEquivalent,
     },
   };
 }

@@ -45,7 +45,7 @@ export function AddIncomeDialog({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [categoryValue, setCategoryValue] = useState<CategoryType>(options[0]?.value ?? "SALARY");
-  const [scheduleMode, setScheduleMode] = useState<"RECURRING" | "START_FROM_DATE">("RECURRING");
+  const [scheduleMode, setScheduleMode] = useState<"RECURRING" | "ONE_TIME">("RECURRING");
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -76,15 +76,11 @@ export function AddIncomeDialog({
     const expectedDateStr = String(formData.get("expectedDate") ?? "");
     const startDateStr = String(formData.get("startDate") ?? "");
     const parsedStartDate = parseDateInputToUtcNoon(startDateStr);
-    const effectiveIsRecurring = isBoothCategory || scheduleMode === "RECURRING" || scheduleMode === "START_FROM_DATE";
-    const effectivePayoutDate =
-      scheduleMode === "START_FROM_DATE" && parsedStartDate
-        ? parsedStartDate.getUTCDate()
-        : payoutDate;
-    const effectiveExpectedDate =
-      scheduleMode === "START_FROM_DATE"
-        ? parsedStartDate
-        : (!effectiveIsRecurring && expectedDateStr ? parseDateInputToUtcNoon(expectedDateStr) : null);
+    const effectiveIsRecurring = isBoothCategory || (scheduleMode === "RECURRING" && isRecurring);
+    const effectivePayoutDate = effectiveIsRecurring ? payoutDate : null;
+    const effectiveExpectedDate = effectiveIsRecurring
+      ? parsedStartDate
+      : (expectedDateStr ? parseDateInputToUtcNoon(expectedDateStr) : null);
 
     startTransition(async () => {
         showLoading("Menambahkan sumber pendapatan...");
@@ -163,7 +159,7 @@ export function AddIncomeDialog({
           </div>
           
           <div className="space-y-2">
-            <input type="hidden" name="isRecurring" value="on" />
+            <input type="hidden" name="isRecurring" value={isBoothCategory || scheduleMode === "RECURRING" ? "on" : "off"} />
             {isBoothCategory ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm text-slate-600 dark:text-slate-300">
                 Kategori Booth selalu <span className="font-semibold">Recurring Bulanan</span>.
@@ -173,14 +169,14 @@ export function AddIncomeDialog({
                 <label htmlFor="income-schedule-mode" className="text-sm font-medium">Pola Jadwal</label>
                 <Select
                   value={scheduleMode}
-                  onValueChange={(value) => setScheduleMode(value === "START_FROM_DATE" ? "START_FROM_DATE" : "RECURRING")}
+                  onValueChange={(value) => setScheduleMode(value === "ONE_TIME" ? "ONE_TIME" : "RECURRING")}
                 >
                   <SelectTrigger id="income-schedule-mode" className="w-full">
                     <SelectValue placeholder="Pilih pola jadwal" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="RECURRING">Recurring bulanan</SelectItem>
-                    <SelectItem value="START_FROM_DATE">Mulai dari tanggal tertentu</SelectItem>
+                    <SelectItem value="ONE_TIME">Sekali cair di tanggal tertentu</SelectItem>
                   </SelectContent>
                 </Select>
               </>
@@ -189,34 +185,46 @@ export function AddIncomeDialog({
 
           <div className="grid grid-cols-1 gap-4">
             {isBoothCategory || scheduleMode === "RECURRING" ? (
-              <div className="space-y-2">
-                  <label className="text-sm font-medium italic text-slate-500">Recurring Bulanan:</label>
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="income-payout-date" className="text-sm">Dibayar setiap tanggal</label>
-                      <input
-                      id="income-payout-date"
-                          name="payoutDate"
-                          type="number"
-                          min={1}
-                          max={31}
-                          defaultValue={25}
-                          className="w-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-1.5"
-                      />
-                  </div>
-              </div>
+              <>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium italic text-slate-500">Recurring Bulanan:</label>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="income-payout-date" className="text-sm">Dibayar setiap tanggal</label>
+                        <input
+                        id="income-payout-date"
+                            name="payoutDate"
+                            type="number"
+                            min={1}
+                            max={31}
+                            defaultValue={25}
+                            className="w-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-1.5"
+                        />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="income-start-date" className="text-sm font-medium italic text-slate-500">Mulai gajian dari tanggal:</label>
+                  <input
+                    id="income-start-date"
+                    name="startDate"
+                    type="date"
+                    required={!isBoothCategory}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Contoh: mulai kerja 1 April, gajian pertama 1 Mei. Isi tanggal pertama kali cair.
+                  </p>
+                </div>
+              </>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="income-start-date" className="text-sm font-medium italic text-slate-500">Mulai dari tanggal:</label>
+                <label htmlFor="income-expected-date" className="text-sm font-medium italic text-slate-500">Sekali cair pada tanggal:</label>
                 <input
-                  id="income-start-date"
-                  name="startDate"
+                  id="income-expected-date"
+                  name="expectedDate"
                   type="date"
                   required
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Income akan berjalan recurring bulanan mulai tanggal ini.
-                </p>
               </div>
             )}
           </div>

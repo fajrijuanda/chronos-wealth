@@ -80,11 +80,12 @@ export default function DatePickerCalendar({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 bg-violet-50/95 dark:bg-violet-950/65 border border-violet-200/80 dark:border-violet-400/30 rounded-2xl shadow-[0_24px_40px_-28px_rgba(115,102,224,0.8)] z-50 p-4 min-w-80 backdrop-blur-sm">
+        <div className="absolute top-full mt-2 left-0 bg-violet-50/95 dark:bg-violet-950/65 border border-violet-200/80 dark:border-violet-400/30 rounded-2xl shadow-[0_24px_40px_-28px_rgba(115,102,224,0.8)] z-1000 p-4 min-w-80 backdrop-blur-sm">
           {/* Header with month/year and navigation */}
           <div className="flex items-center justify-between mb-4">
             <button
               type="button"
+              title="Previous month"
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
               className="p-1.5 hover:bg-violet-100/90 dark:hover:bg-violet-900/45 rounded-xl transition-colors"
             >
@@ -99,6 +100,7 @@ export default function DatePickerCalendar({
 
             <button
               type="button"
+              title="Next month"
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
               className="p-1.5 hover:bg-violet-100/90 dark:hover:bg-violet-900/45 rounded-xl transition-colors"
             >
