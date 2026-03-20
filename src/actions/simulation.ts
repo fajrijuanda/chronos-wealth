@@ -57,10 +57,11 @@ function monthKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth() + 1}`;
 }
 
-function getBoothPayoutDay(packageType: BoothPackageType, mouSignedAt: Date, daysInMonth: number) {
+function getBoothPayoutDay(packageType: BoothPackageType, mouSignedAt: Date) {
   const baseDay = getDate(mouSignedAt);
   const offset = packageType === BoothPackageType.EXCLUSIVE ? 0 : 1;
-  return clampDay(baseDay + offset, 1, daysInMonth);
+  const payoutDay = baseDay + offset;
+  return payoutDay > 31 ? 1 : payoutDay;
 }
 
 function getBoothCommissionDay(mouSignedAt: Date, daysInMonth: number) {
@@ -301,6 +302,7 @@ async function simulateUserBoothPlan(input: {
   const personalPt2Target = 0;
 
   const plans: Array<{
+    monthKey: string;
     month: string;
     purchaseDay: number;
     cashBeforePurchase: number;
@@ -387,7 +389,6 @@ async function simulateUserBoothPlan(input: {
       const payoutDay = getBoothPayoutDay(
         booth.packageType,
         booth.mouSignedAt,
-        daysInMonth,
       );
 
       let boothActiveInMonth = true;
@@ -548,6 +549,7 @@ async function simulateUserBoothPlan(input: {
     boothEquivalentOwned = activeEquivalentFromOwned + simulatedEquivalentAdded;
 
     plans.push({
+      monthKey: format(monthDate, "yyyy-MM"),
       month: format(monthDate, "MMM yyyy"),
       purchaseDay,
       cashBeforePurchase,

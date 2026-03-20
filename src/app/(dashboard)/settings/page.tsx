@@ -1,19 +1,18 @@
 import {
+  deleteUserAccountByEmail,
   getCollaborationWorkspace,
-  getUserConnectionDirectoryByEmail,
-  respondFriendRequest,
-  sendFriendRequestByEmail,
   setManualBasePrice,
   setUserFinanceProfileByEmail,
   setUserTargetByEmail,
+  updateUserEmailByEmail,
 } from "@/actions/collaboration";
 import { logoutAction } from "@/actions/auth";
 import { getActiveUserEmail } from "@/lib/active-user";
+import { clearSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
 import { BoothPurchaseTiming } from "@prisma/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { SelectField } from "@/components/ui/select-field";
 import {
   DropdownMenu,
@@ -21,18 +20,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SlidersHorizontal, Flag, Users, Shield } from "lucide-react";
+import { AlertTriangle, Flag, Mail, Shield, SlidersHorizontal, UserX } from "lucide-react";
 import { formatGroupedNumber } from "@/lib/number-format";
 
 export const dynamic = "force-dynamic";
 
-type TabId = "finance" | "goals" | "connections" | "session";
+type TabId = "finance" | "goals" | "session" | "account";
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: "finance", label: "Finance" },
   { id: "goals", label: "Goals" },
-  { id: "connections", label: "Connections" },
   { id: "session", label: "Session" },
+  { id: "account", label: "Account" },
 ];
 
 function getTabLabel(tab: TabId) {
@@ -46,23 +45,14 @@ export default async function SettingsPage({
 }) {
   const sp = await searchParams;
   const activeEmail = await getActiveUserEmail(typeof sp.user === "string" ? sp.user : undefined);
+  if (sp.tab === "connections") {
+    redirect("/profile?tab=connections");
+  }
   const tabRaw = typeof sp.tab === "string" ? sp.tab : "finance";
   const tab: TabId = tabs.some((item) => item.id === tabRaw) ? (tabRaw as TabId) : "finance";
 
-  const [{ currentUser, directory }, workspace] = await Promise.all([
-    getUserConnectionDirectoryByEmail(activeEmail),
-    getCollaborationWorkspace(activeEmail),
-  ]);
-
-  const connectionSummary = directory.reduce(
-    (acc, entry) => {
-      if (entry.relationship === "ACCEPTED") acc.connected += 1;
-      if (entry.relationship === "PENDING_IN") acc.pendingIn += 1;
-      if (entry.relationship === "PENDING_OUT") acc.pendingOut += 1;
-      return acc;
-    },
-    { connected: 0, pendingIn: 0, pendingOut: 0 },
-  );
+  const workspace = await getCollaborationWorkspace(activeEmail);
+  const currentUser = workspace.currentUser;
 
   async function saveFinance(formData: FormData) {
     "use server";
@@ -97,25 +87,34 @@ export default async function SettingsPage({
     redirect("/settings?tab=goals&ok=saved");
   }
 
-  async function connectUser(formData: FormData) {
+  async function saveAccountEmail(formData: FormData) {
     "use server";
 
-    const requesterEmail = String(formData.get("requesterEmail") ?? "");
-    const addresseeEmail = String(formData.get("addresseeEmail") ?? "");
+    const nextEmail = String(formData.get("newEmail") ?? "").trim().toLowerCase();
+    if (!nextEmail || !nextEmail.includes("@")) {
+      redirect("/settings?tab=account&error=validation-error");
+    }
 
-    await sendFriendRequestByEmail({ requesterEmail, addresseeEmail });
-    redirect("/settings?tab=connections&ok=request-sent");
+    await updateUserEmailByEmail({
+      currentEmail: activeEmail,
+      newEmail: nextEmail,
+    });
+
+    await setSessionUserEmail(nextEmail);
+    redirect("/settings?tab=account&ok=email-updated");
   }
 
-  async function respondConnection(formData: FormData) {
+  async function deleteAccount(formData: FormData) {
     "use server";
 
-    const friendshipId = String(formData.get("friendshipId") ?? "");
-    const actionRaw = String(formData.get("action") ?? "reject");
-    const action = actionRaw === "accept" ? "accept" : "reject";
+    const confirmText = String(formData.get("confirmText") ?? "").trim();
+    if (confirmText !== "DELETE") {
+      redirect("/settings?tab=account&error=confirm-delete-required");
+    }
 
-    await respondFriendRequest(friendshipId, action);
-    redirect(`/settings?tab=connections&ok=${action}`);
+    await deleteUserAccountByEmail({ email: activeEmail });
+    await clearSessionUserEmail();
+    redirect("/login?ok=account-deleted");
   }
 
   return (
@@ -151,7 +150,8 @@ export default async function SettingsPage({
       </div>
 
       {tab === "finance" ? (
-        <div className="surface-card p-6 space-y-5 max-w-4xl">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+          <div className="surface-card p-6 space-y-5 xl:col-span-8">
           <div className="flex items-center gap-3 border-b border-border pb-4">
             <div className="p-2 rounded-xl bg-sky-100/80 dark:bg-sky-900/35">
               <SlidersHorizontal className="w-5 h-5 text-sky-600 dark:text-sky-300" />
@@ -229,11 +229,28 @@ export default async function SettingsPage({
 
             <Button type="submit">Save Finance Settings</Button>
           </form>
+          </div>
+
+          <div className="space-y-4 xl:col-span-4">
+            <div className="surface-card-soft p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Current Purchase Mode</p>
+              <p className="mt-1 text-lg font-semibold">{workspace.financeProfile?.purchaseTiming ?? BoothPurchaseTiming.END_OF_MONTH}</p>
+            </div>
+            <div className="surface-card-soft p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Renewal Policy</p>
+              <p className="mt-1 text-sm">Economy: {workspace.financeProfile?.renewEconomyBoothContracts ? "Auto" : "Manual"}</p>
+              <p className="text-sm">Exclusive: {workspace.financeProfile?.renewExclusiveBoothContracts ? "Auto" : "Manual"}</p>
+            </div>
+            <div className="surface-card-soft p-4 text-sm text-muted-foreground">
+              Gunakan rentang expense realistis agar proyeksi simulation tidak terlalu agresif.
+            </div>
+          </div>
         </div>
       ) : null}
 
       {tab === "goals" ? (
-        <div className="surface-card p-6 space-y-5 max-w-3xl">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+          <div className="surface-card p-6 space-y-5 xl:col-span-8">
           <div className="flex items-center gap-3 border-b border-border pb-4">
             <div className="p-2 rounded-xl bg-amber-100/80 dark:bg-amber-900/35">
               <Flag className="w-5 h-5 text-amber-600 dark:text-amber-300" />
@@ -271,103 +288,32 @@ export default async function SettingsPage({
             </div>
             <Button type="submit">Save Goal Settings</Button>
           </form>
-        </div>
-      ) : null}
-
-      {tab === "connections" ? (
-        <div className="surface-card p-6 space-y-5">
-          <div className="flex items-center gap-3 border-b border-border pb-4">
-            <div className="p-2 rounded-xl bg-violet-100/80 dark:bg-violet-900/35">
-              <Users className="w-5 h-5 text-violet-600 dark:text-violet-300" />
-            </div>
-            <h2 className="font-display text-xl font-semibold">Connections</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Connected</p>
-              <p className="mt-1 text-2xl font-semibold">{connectionSummary.connected}</p>
+          <div className="space-y-4 xl:col-span-4">
+            <div className="surface-card-soft p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Booth Equivalent Achieved</p>
+              <p className="mt-1 text-2xl font-semibold">{workspace.targetProgress.boothEquivalentAchieved.toFixed(2)}</p>
             </div>
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Incoming Requests</p>
-              <p className="mt-1 text-2xl font-semibold">{connectionSummary.pendingIn}</p>
+            <div className="surface-card-soft p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Progress</p>
+              <p className="mt-1 text-lg font-semibold">{workspace.targetProgress.progressPct.toFixed(1)}%</p>
+              <progress
+                value={Math.min(100, workspace.targetProgress.progressPct)}
+                max={100}
+                className="mt-2 h-2 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-slate-200 dark:[&::-webkit-progress-bar]:bg-slate-800 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-linear-to-r [&::-webkit-progress-value]:from-indigo-500 [&::-webkit-progress-value]:to-violet-500 [&::-moz-progress-bar]:bg-linear-to-r [&::-moz-progress-bar]:from-indigo-500 [&::-moz-progress-bar]:to-violet-500"
+              />
             </div>
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Outgoing Requests</p>
-              <p className="mt-1 text-2xl font-semibold">{connectionSummary.pendingOut}</p>
+            <div className="surface-card-soft p-4 text-sm text-muted-foreground">
+              Review target secara berkala agar arah pertumbuhan tetap sehat dan terukur.
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-violet-200/70 bg-violet-50/60 p-4 text-sm text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/25 dark:text-violet-200">
-            Tip: Prioritaskan koneksi yang relevan untuk simulasi partner dan kolaborasi target jangka panjang.
-          </div>
-
-          <div className="space-y-3">
-            {directory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada user lain yang bisa dihubungkan.</p>
-            ) : (
-              directory.map((entry: {
-                user: { id: string; email: string; displayName: string };
-                relationship: "NONE" | "PENDING_OUT" | "PENDING_IN" | "ACCEPTED" | "REJECTED" | "BLOCKED";
-                friendshipId: string | null;
-              }) => (
-                <div key={entry.user.id} className="rounded-2xl border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <Link href={`/profile/${encodeURIComponent(entry.user.email)}`} className="font-semibold text-foreground hover:underline">
-                      {entry.user.displayName}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">{entry.user.email}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {entry.relationship === "NONE" ? (
-                      <form action={connectUser}>
-                        <input type="hidden" name="requesterEmail" value={currentUser.email} />
-                        <input type="hidden" name="addresseeEmail" value={entry.user.email} />
-                        <Button type="submit" size="sm">Connect</Button>
-                      </form>
-                    ) : null}
-
-                    {entry.relationship === "PENDING_OUT" ? (
-                      <Badge variant="outline">Pending Approval</Badge>
-                    ) : null}
-
-                    {entry.relationship === "PENDING_IN" && entry.friendshipId ? (
-                      <>
-                        <form action={respondConnection}>
-                          <input type="hidden" name="friendshipId" value={entry.friendshipId} />
-                          <input type="hidden" name="action" value="accept" />
-                          <Button type="submit" size="sm">Accept</Button>
-                        </form>
-                        <form action={respondConnection}>
-                          <input type="hidden" name="friendshipId" value={entry.friendshipId} />
-                          <input type="hidden" name="action" value="reject" />
-                          <Button type="submit" size="sm" variant="outline">Reject</Button>
-                        </form>
-                      </>
-                    ) : null}
-
-                    {entry.relationship === "ACCEPTED" ? (
-                      <Badge variant="outline">Connected</Badge>
-                    ) : null}
-
-                    {entry.relationship === "REJECTED" ? (
-                      <Badge variant="outline">Rejected</Badge>
-                    ) : null}
-
-                    {entry.relationship === "BLOCKED" ? (
-                      <Badge variant="outline">Blocked</Badge>
-                    ) : null}
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         </div>
       ) : null}
 
       {tab === "session" ? (
-        <div className="surface-card p-6 max-w-2xl space-y-5">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+          <div className="surface-card p-6 space-y-5 xl:col-span-8">
           <div className="flex items-center gap-3 border-b border-border pb-4">
             <div className="p-2 rounded-xl bg-rose-100/80 dark:bg-rose-900/35">
               <Shield className="w-5 h-5 text-rose-600 dark:text-rose-300" />
@@ -398,6 +344,88 @@ export default async function SettingsPage({
           <form action={logoutAction}>
             <Button type="submit" variant="destructive">Logout Now</Button>
           </form>
+          </div>
+
+          <div className="space-y-4 xl:col-span-4">
+            <div className="surface-card-soft p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Auth Email</p>
+              <p className="mt-1 break-all text-sm font-semibold">{currentUser.email}</p>
+            </div>
+            <div className="surface-card-soft p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Need Connection Management?</p>
+              <Link href="/profile?tab=connections" className="mt-1 inline-flex text-sm font-semibold text-primary hover:underline">
+                Open Connections in Profile
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {tab === "account" ? (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+          <div className="surface-card p-6 space-y-6 xl:col-span-8">
+            <div className="flex items-center gap-3 border-b border-border pb-4">
+              <div className="p-2 rounded-xl bg-indigo-100/80 dark:bg-indigo-900/35">
+                <Mail className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+              </div>
+              <h2 className="font-display text-xl font-semibold">Account Management</h2>
+            </div>
+
+            <div className="rounded-2xl border border-border/80 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Current Email</p>
+              <p className="mt-1 break-all text-sm font-semibold">{currentUser.email}</p>
+            </div>
+
+            <form action={saveAccountEmail} className="space-y-3 rounded-2xl border border-border/80 bg-card/70 p-4">
+              <h3 className="text-base font-semibold">Change Email</h3>
+              <p className="text-sm text-muted-foreground">Gunakan email aktif yang valid. Sesi Anda akan dipindah ke email baru.</p>
+              <div className="space-y-2">
+                <label htmlFor="settings-new-email" className="text-sm font-medium">New Email</label>
+                <input
+                  id="settings-new-email"
+                  name="newEmail"
+                  type="email"
+                  required
+                  placeholder="nama@email.com"
+                  className="w-full rounded-2xl border border-input bg-white/70 dark:bg-slate-900/35 px-4 py-2"
+                />
+              </div>
+              <Button type="submit">Update Email</Button>
+            </form>
+
+            <form action={deleteAccount} className="space-y-3 rounded-2xl border border-rose-200/80 bg-rose-50/60 p-4 dark:border-rose-900/60 dark:bg-rose-950/25">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-rose-700 dark:text-rose-300">
+                <UserX className="h-4 w-4" /> Delete Account
+              </h3>
+              <p className="text-sm text-rose-700/90 dark:text-rose-200">
+                Aksi ini permanen. Ketik <strong>DELETE</strong> untuk konfirmasi penghapusan akun.
+              </p>
+              <div className="space-y-2">
+                <label htmlFor="settings-confirm-delete" className="text-sm font-medium text-rose-700 dark:text-rose-300">Confirmation Text</label>
+                <input
+                  id="settings-confirm-delete"
+                  name="confirmText"
+                  type="text"
+                  required
+                  placeholder="DELETE"
+                  className="w-full rounded-2xl border border-rose-300/80 bg-white/80 px-4 py-2 dark:border-rose-800 dark:bg-slate-900/35"
+                />
+              </div>
+              <Button type="submit" variant="destructive">Delete My Account</Button>
+            </form>
+          </div>
+
+          <div className="space-y-4 xl:col-span-4">
+            <div className="surface-card-soft p-4 text-sm text-muted-foreground">
+              Ganti email hanya jika Anda masih memiliki akses ke email baru untuk login berikutnya.
+            </div>
+            <div className="surface-card-soft p-4 text-sm text-rose-700 dark:text-rose-300">
+              <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Danger Zone</p>
+              <p className="mt-2 text-muted-foreground dark:text-rose-200/90">
+                Penghapusan akun akan menghapus data profil, koneksi, target, dan data terkait akun ini.
+              </p>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

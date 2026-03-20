@@ -20,6 +20,61 @@ interface StatusContextType {
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined);
 
+const SUCCESS_MESSAGE_MAP: Record<string, string> = {
+  saved: "Perubahan berhasil disimpan.",
+  created: "Data berhasil ditambahkan.",
+  updated: "Data berhasil diperbarui.",
+  deleted: "Data berhasil dihapus.",
+  accept: "Permintaan berhasil diterima.",
+  reject: "Permintaan berhasil ditolak.",
+  "request-sent": "Permintaan berhasil dikirim.",
+  "email-updated": "Email akun berhasil diperbarui.",
+  "account-deleted": "Akun berhasil dihapus.",
+};
+
+const ERROR_MESSAGE_MAP: Record<string, string> = {
+  failed: "Proses gagal, silakan coba lagi.",
+  "not-found": "Data tidak ditemukan.",
+  unauthorized: "Anda tidak memiliki akses untuk aksi ini.",
+  "validation-error": "Data yang dimasukkan belum valid.",
+  "confirm-delete-required": "Ketik DELETE untuk mengonfirmasi penghapusan akun.",
+};
+
+function toSentenceCase(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function humanizeCode(raw: string) {
+  return toSentenceCase(raw.replace(/[-_]+/g, " ").trim());
+}
+
+function normalizeStatusMessage(raw: string | null | undefined, kind: "success" | "error") {
+  if (!raw) return undefined;
+
+  const message = raw.trim();
+  if (!message) return undefined;
+
+  const normalizedKey = message.toLowerCase();
+  const mapped =
+    kind === "success"
+      ? SUCCESS_MESSAGE_MAP[normalizedKey]
+      : ERROR_MESSAGE_MAP[normalizedKey];
+
+  if (mapped) return mapped;
+
+  // If the message is a compact status code (e.g. request-sent), turn it into readable text.
+  const looksLikeCode = !message.includes(" ") || /[-_]/.test(message);
+  if (looksLikeCode) {
+    const readable = humanizeCode(message);
+    return kind === "success"
+      ? `Berhasil: ${readable}.`
+      : `Terjadi kendala: ${readable}.`;
+  }
+
+  return toSentenceCase(message);
+}
+
 function StatusUrlHandler({ 
     setIsOpen, 
     setType, 
@@ -39,12 +94,12 @@ function StatusUrlHandler({
 
     if (ok) {
         setType("success");
-        setMessage(ok);
+        setMessage(normalizeStatusMessage(ok, "success"));
         setTitle("Berhasil!");
         setIsOpen(true);
     } else if (error) {
         setType("error");
-        setMessage(error);
+        setMessage(normalizeStatusMessage(error, "error"));
         setTitle("Gagal");
         setIsOpen(true);
     }
@@ -93,14 +148,14 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
 
   const showSuccess = useCallback((msg?: string, t?: string) => {
     setType("success");
-    setMessage(msg);
+    setMessage(normalizeStatusMessage(msg, "success"));
     setTitle(t);
     setIsOpen(true);
   }, []);
 
   const showError = useCallback((msg?: string, t?: string) => {
     setType("error");
-    setMessage(msg);
+    setMessage(normalizeStatusMessage(msg, "error"));
     setTitle(t);
     setIsOpen(true);
   }, []);

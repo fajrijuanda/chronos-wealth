@@ -4,6 +4,40 @@ import { prisma } from "@/lib/prisma";
 import { CategoryType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { ensureAppUserByEmail } from "@/actions/collaboration";
+import { getSessionUserEmail } from "@/lib/auth-session";
+import { isSuperAdminEmail } from "@/lib/active-user";
+
+async function getSessionActor() {
+  const sessionEmail = await getSessionUserEmail();
+  if (!sessionEmail) {
+    throw new Error("Unauthorized");
+  }
+
+  const actor = await ensureAppUserByEmail({ email: sessionEmail });
+  return {
+    actor,
+    sessionEmail,
+    isSuperAdmin: isSuperAdminEmail(sessionEmail),
+  };
+}
+
+async function assertIncomeSourceAccess(incomeSourceId: string) {
+  const actorCtx = await getSessionActor();
+  const source = await prisma.incomeSource.findUnique({
+    where: { id: incomeSourceId },
+    select: { id: true, ownerUserId: true },
+  });
+
+  if (!source) {
+    throw new Error("Income source not found");
+  }
+
+  if (!actorCtx.isSuperAdmin && source.ownerUserId !== actorCtx.actor.id) {
+    throw new Error("Unauthorized");
+  }
+
+  return source;
+}
 
 export async function getIncomeSources() {
   return await prisma.incomeSource.findMany({
@@ -48,6 +82,12 @@ export async function createIncomeSourceByEmail(data: {
   payoutDate?: number | null;
   expectedDate?: Date | null;
 }) {
+  const { sessionEmail, isSuperAdmin } = await getSessionActor();
+  const normalizedOwnerEmail = data.ownerEmail.trim().toLowerCase();
+  if (!isSuperAdmin && normalizedOwnerEmail !== sessionEmail) {
+    throw new Error("Unauthorized");
+  }
+
   const owner = await ensureAppUserByEmail({ email: data.ownerEmail });
   return createIncomeSource({
     ownerUserId: owner.id,
@@ -61,6 +101,7 @@ export async function createIncomeSourceByEmail(data: {
 }
 
 export async function deleteIncomeSource(id: string) {
+  await assertIncomeSourceAccess(id);
   await prisma.incomeSource.delete({
     where: { id },
   });
@@ -68,6 +109,7 @@ export async function deleteIncomeSource(id: string) {
 }
 
 export async function toggleIncomeSourceActive(id: string, isActive: boolean) {
+  await assertIncomeSourceAccess(id);
   await prisma.incomeSource.update({
     where: { id },
     data: { isActive },
@@ -84,6 +126,7 @@ export async function updateIncomeSource(id: string, data: Partial<{
   expectedDate: Date | null;
   isActive: boolean;
 }>) {
+  await assertIncomeSourceAccess(id);
   const result = await prisma.incomeSource.update({
     where: { id },
     data,

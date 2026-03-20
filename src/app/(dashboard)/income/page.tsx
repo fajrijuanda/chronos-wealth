@@ -6,6 +6,7 @@ import {
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { getActiveUserEmail } from "@/lib/active-user";
 import { formatGroupedNumber } from "@/lib/number-format";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AddIncomeDialog } from "./AddIncomeDialog";
@@ -54,7 +55,6 @@ export default async function IncomePage({
     async function handleSalesUpload(formData: FormData) {
         "use server";
 
-        const uploadedByEmail = String(formData.get("uploadedByEmail") ?? "");
         const month = Number(formData.get("month") ?? 0);
         const year = Number(formData.get("year") ?? 0);
         const file = formData.get("salesFile");
@@ -66,7 +66,7 @@ export default async function IncomePage({
         let result;
         try {
             result = await importMonthlyBoothSalesByEmail({
-                uploadedByEmail,
+                uploadedByEmail: activeEmail,
                 month,
                 year,
                 file,
@@ -152,8 +152,6 @@ export default async function IncomePage({
                     </p>
 
                     <form action={handleSalesUpload} className="space-y-3">
-                        <input type="hidden" name="uploadedByEmail" value={workspace.currentUser.email} />
-
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label htmlFor="sales-month" className="text-sm font-medium">Month</label>

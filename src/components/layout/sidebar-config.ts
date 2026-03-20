@@ -1,6 +1,7 @@
 import {
   Box,
   CircleHelp,
+  FileBarChart2,
   Handshake,
   LayoutDashboard,
   LineChart,
@@ -55,6 +56,7 @@ export function getSidebarSections(pendingIncomingCount: number): SidebarSection
         { key: "budget", name: "Budget", href: "/budget", icon: PieChart },
         { key: "targets", name: "Targets", href: "/targets", icon: Target },
         { key: "simulation", name: "Simulation", href: "/simulation", icon: LineChart },
+        { key: "financial-report", name: "Financial Report", href: "/financial-report", icon: FileBarChart2 },
         {
           key: "collaboration",
           name: "Collaboration",
@@ -80,8 +82,8 @@ export function getSidebarSections(pendingIncomingCount: number): SidebarSection
           children: [
             { name: "Finance", href: "/settings?tab=finance" },
             { name: "Goals", href: "/settings?tab=goals" },
-            { name: "Connections", href: "/settings?tab=connections" },
             { name: "Session", href: "/settings?tab=session" },
+            { name: "Account", href: "/settings?tab=account" },
           ],
         },
         { key: "help", name: "Help", href: "/help", icon: CircleHelp },

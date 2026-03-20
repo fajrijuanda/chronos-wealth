@@ -4,6 +4,8 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { ensureAppUserByEmail } from "@/actions/collaboration";
+import { getSessionUserEmail } from "@/lib/auth-session";
+import { isSuperAdminEmail } from "@/lib/active-user";
 
 type MonthlyBoothSalesRow = {
   boothName: string;
@@ -195,6 +197,17 @@ export async function importMonthlyBoothSalesByEmail(input: {
   year: number;
   file: File;
 }) {
+  const sessionEmail = await getSessionUserEmail();
+  if (!sessionEmail) {
+    throw new Error("Unauthorized");
+  }
+
+  const normalizedTargetEmail = input.uploadedByEmail.trim().toLowerCase();
+  const canUploadForAnyUser = isSuperAdminEmail(sessionEmail);
+  if (!canUploadForAnyUser && normalizedTargetEmail !== sessionEmail) {
+    throw new Error("Unauthorized");
+  }
+
   const user = await ensureAppUserByEmail({ email: input.uploadedByEmail });
   return importMonthlyBoothSales({
     uploadedById: user.id,

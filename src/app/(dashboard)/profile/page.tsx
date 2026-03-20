@@ -271,7 +271,7 @@ export default async function ProfilePage({
           <article className="surface-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-semibold"><Users className="h-5 w-5 text-emerald-500" /> Connections</h2>
-              <Link href="/settings?tab=connections" className="text-xs font-semibold text-primary hover:underline">Manage</Link>
+              <Link href="/profile?tab=connections" className="text-xs font-semibold text-primary hover:underline">Manage</Link>
             </div>
             <div className="space-y-3">
               {profile.recentConnections.length === 0 ? (

@@ -243,7 +243,7 @@ export async function sendFriendRequest(requesterId: string, addresseeId: string
       priority: NotificationPriority.MEDIUM,
       title: "Permintaan koneksi baru",
       body: `${requester.displayName} mengirimkan permintaan koneksi kepada Anda.`,
-      href: "/settings?tab=connections",
+      href: "/profile?tab=connections",
       metadata: { requesterEmail: requester.email, friendshipId: result.id },
     });
   }
@@ -277,7 +277,7 @@ export async function respondFriendRequest(
       action === "accept"
         ? `${result.addressee.displayName} menerima permintaan koneksi Anda.`
         : `${result.addressee.displayName} menolak permintaan koneksi Anda.`,
-    href: "/settings?tab=connections",
+    href: "/profile?tab=connections",
     metadata: { friendshipId: result.id, action },
   });
 
@@ -1222,4 +1222,86 @@ export async function updateBooth(id: string, data: {
     revalidatePath("/simulation");
     revalidatePath("/collaboration");
     return result;
+}
+
+export async function updateUserEmailByEmail(input: {
+  currentEmail: string;
+  newEmail: string;
+}) {
+  const currentEmail = input.currentEmail.trim().toLowerCase();
+  const newEmail = input.newEmail.trim().toLowerCase();
+
+  if (!newEmail || !newEmail.includes("@")) {
+    throw new Error("Email baru tidak valid");
+  }
+
+  if (currentEmail === newEmail) {
+    return await requireUserByEmail(currentEmail);
+  }
+
+  const existing = await prisma.appUser.findUnique({ where: { email: newEmail } });
+  if (existing) {
+    throw new Error("Email sudah digunakan akun lain");
+  }
+
+  const user = await requireUserByEmail(currentEmail);
+  const updated = await prisma.appUser.update({
+    where: { id: user.id },
+    data: { email: newEmail },
+  });
+
+  revalidatePath("/profile");
+  revalidatePath("/settings");
+  revalidatePath("/collaboration");
+  revalidatePath("/simulation");
+
+  return updated;
+}
+
+export async function deleteUserAccountByEmail(input: { email: string }) {
+  const email = input.email.trim().toLowerCase();
+  const user = await requireUserByEmail(email);
+
+  await prisma.$transaction(async (tx) => {
+    const ownedIncomeSources = await tx.incomeSource.findMany({
+      where: { ownerUserId: user.id },
+      select: { id: true },
+    });
+
+    const sourceIds = ownedIncomeSources.map((item) => item.id);
+    if (sourceIds.length > 0) {
+      await tx.transaction.deleteMany({
+        where: {
+          sourceId: { in: sourceIds },
+        },
+      });
+    }
+
+    await tx.boothMonthlySale.deleteMany({ where: { uploadedById: user.id } });
+    await tx.friendship.deleteMany({
+      where: {
+        OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+      },
+    });
+    await tx.jointBoothProposal.deleteMany({
+      where: {
+        OR: [{ requesterId: user.id }, { partnerId: user.id }],
+      },
+    });
+    await tx.boothOwnership.deleteMany({ where: { userId: user.id } });
+    await tx.userAsset.deleteMany({ where: { ownerUserId: user.id } });
+    await tx.userGrowthTarget.deleteMany({ where: { userId: user.id } });
+    await tx.userNotification.deleteMany({ where: { userId: user.id } });
+    await tx.userFinanceProfile.deleteMany({ where: { userId: user.id } });
+    await tx.userBoothTarget.deleteMany({ where: { userId: user.id } });
+    await tx.incomeSource.deleteMany({ where: { ownerUserId: user.id } });
+
+    await tx.appUser.delete({ where: { id: user.id } });
+  });
+
+  revalidatePath("/overview");
+  revalidatePath("/assets");
+  revalidatePath("/income");
+  revalidatePath("/profile");
+  revalidatePath("/settings");
 }

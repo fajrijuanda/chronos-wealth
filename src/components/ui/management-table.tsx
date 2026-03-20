@@ -1,7 +1,18 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
-import { Download, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import {
+  Download,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  FileText,
+  FileSpreadsheet,
+  Braces,
+  FileType2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -303,10 +314,18 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem onClick={() => exportData("csv")}>Export CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportData("excel")}>Export Excel</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportData("json")}>Export JSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportData("pdf")}>Export PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportData("csv")}>
+                <FileText className="mr-2 h-4 w-4 text-sky-600 dark:text-sky-400" /> CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportData("excel")}>
+                <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportData("json")}>
+                <Braces className="mr-2 h-4 w-4 text-violet-600 dark:text-violet-400" /> JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportData("pdf")}>
+                <FileType2 className="mr-2 h-4 w-4 text-rose-600 dark:text-rose-400" /> PDF
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
