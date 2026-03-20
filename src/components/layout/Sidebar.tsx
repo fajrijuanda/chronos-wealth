@@ -235,7 +235,7 @@ export function Sidebar({
         ) : null}
 
         {collapsed && expanded ? (
-          <div className="absolute left-full top-1/2 z-30 ml-2 w-60 -translate-y-1/2 rounded-2xl border border-white/50 bg-white/95 p-3 shadow-[0_25px_50px_-12px_rgba(62,69,143,1.1)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-white/10 dark:bg-slate-900/98">
+          <div className="absolute left-full top-1/2 z-60 ml-3 w-60 -translate-y-1/2 rounded-2xl border border-white/65 bg-white/96 p-3 shadow-[0_30px_60px_-10px_rgba(62,69,143,1.05)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-white/15 dark:bg-slate-900/98">
             <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
               {item.name}
             </p>
@@ -249,7 +249,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "h-screen max-w-xs flex-col hidden md:flex backdrop-blur-xl bg-sidebar/70 border-r border-sidebar-border/85 shadow-[14px_0_40px_-30px_rgba(93,102,186,0.65)] isolate transition-all duration-300",
+        "relative z-30 h-screen max-w-xs flex-col hidden md:flex backdrop-blur-xl bg-sidebar/70 border-r border-sidebar-border/85 shadow-[14px_0_40px_-30px_rgba(93,102,186,0.65)] isolate transition-all duration-300",
         collapsed ? "w-20" : "w-64",
       )}
     >
@@ -298,7 +298,7 @@ export function Sidebar({
         </Link>
       </div>
 
-      <div className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-2" : "px-3")}>
+      <div className={cn("flex-1 overflow-y-auto overflow-x-visible py-4", collapsed ? "px-2" : "px-3")}>
         <div className="space-y-5">
           {sections.map((section) => (
             <div key={section.label} className="space-y-2">
