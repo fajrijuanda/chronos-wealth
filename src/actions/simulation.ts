@@ -211,7 +211,7 @@ async function simulateUserBoothPlan(input: {
     boothBasePrice: input.simUser.fallbackBoothPrice,
   });
 
-  const [financeProfile, incomeSources, target, ownerships, expenseTransactions] = await Promise.all([
+  const [financeProfile, incomeSources, target, ownerships, expenseTransactions, budgetAggregate] = await Promise.all([
     prisma.userFinanceProfile.findUnique({ where: { userId: user.id } }),
     getIncomeSourcesByUserId(user.id),
     prisma.userBoothTarget.findUnique({ where: { userId: user.id } }),
@@ -230,6 +230,11 @@ async function simulateUserBoothPlan(input: {
       select: {
         date: true,
         amount: true,
+      },
+    }),
+    prisma.budgetLimit.aggregate({
+      _sum: {
+        maxLimit: true,
       },
     }),
   ]);
@@ -261,6 +266,7 @@ async function simulateUserBoothPlan(input: {
   const profileMonthlyExpenseBase = hasExplicitProfileExpense
     ? ((profileMin ?? 0) + (profileMax ?? 0)) / 2
     : 0;
+  const monthlyBudgetCap = budgetAggregate._sum.maxLimit ?? 0;
 
   const expenseByMonth = expenseTransactions.reduce<Record<string, number>>((acc, tx) => {
     const key = monthKey(tx.date);
@@ -328,7 +334,9 @@ async function simulateUserBoothPlan(input: {
     const daysInMonth = getDate(monthEndDate);
 
     const transactionExpense = expenseByMonth[monthKey(monthDate)] ?? 0;
-    const monthlyExpense = profileMonthlyExpenseBase + transactionExpense;
+    const monthlyExpense = monthlyBudgetCap > 0
+      ? monthlyBudgetCap
+      : profileMonthlyExpenseBase + transactionExpense;
 
     const profileDay = financeProfile?.purchaseDayOverride;
     const defaultPurchaseDay =
@@ -579,7 +587,7 @@ async function simulateUserBoothPlan(input: {
     purchaseTiming,
     includeHoldingPlan,
     includePt2Plan,
-    monthlyExpense: profileMonthlyExpenseBase,
+    monthlyExpense: monthlyBudgetCap > 0 ? monthlyBudgetCap : profileMonthlyExpenseBase,
     idleCashTarget,
     holdingFundAccumulated,
     personalHoldingTarget,

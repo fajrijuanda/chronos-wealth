@@ -117,10 +117,10 @@ export function Sidebar({
       setFlyoutGroup((prev) => (prev === key ? null : key));
       return;
     }
-    // Auto-collapse other groups when expanding a new one (accordion behavior)
+    // Toggle the group
     setOpenGroups((prev) => ({
-      collaboration: key === "collaboration" ? !prev.collaboration : false,
-      settings: key === "settings" ? !prev.settings : false,
+      ...prev,
+      [key]: !prev[key],
     }));
   };
 
@@ -235,7 +235,11 @@ export function Sidebar({
         ) : null}
 
         {collapsed && expanded ? (
-          <div className="absolute left-full top-1/2 z-60 ml-3 w-60 -translate-y-1/2 rounded-2xl border border-white/65 bg-white/96 p-3 shadow-[0_30px_60px_-10px_rgba(62,69,143,1.05)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-white/15 dark:bg-slate-900/98">
+          <div className="fixed top-1/2 z-50 w-60 -translate-y-1/2 rounded-2xl border border-white/65 bg-white/96 p-3 shadow-[0_30px_60px_-10px_rgba(62,69,143,1.05)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-white/15 dark:bg-slate-900/98"
+            style={{
+              left: `calc(5rem + 0.75rem)`,
+            }}
+          >
             <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
               {item.name}
             </p>
@@ -302,11 +306,12 @@ export function Sidebar({
         <div className="space-y-5">
           {sections.map((section) => (
             <div key={section.label} className="space-y-2">
-              {!collapsed ? (
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  {section.label}
-                </p>
-              ) : null}
+              <p className={cn(
+                "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400 transition-all duration-200",
+                collapsed ? "px-2 text-center text-[8px]" : "px-3"
+              )}>
+                {collapsed ? section.label.charAt(0) : section.label}
+              </p>
               <div className="space-y-1.5">{section.items.map(renderMenuItem)}</div>
             </div>
           ))}
