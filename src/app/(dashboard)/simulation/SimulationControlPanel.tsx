@@ -76,6 +76,9 @@ export function SimulationControlPanel(props: {
   const [includeExtraFreelance, setIncludeExtraFreelance] = useState(
     props.initialExtraFreelance,
   );
+  const [openingBalance, setOpeningBalance] = useState(
+    props.financeProfile?.openingBalance?.toString() || "0",
+  );
 
   const applySimulation = () => {
     const params = new URLSearchParams();
@@ -84,6 +87,11 @@ export function SimulationControlPanel(props: {
     params.set("date", date);
     params.set("delimiter", delimiter);
     params.set("eventFilter", eventFilter);
+    
+    const balanceNum = parseFloat(openingBalance) || 0;
+    if (balanceNum > 0) {
+      params.set("openingBalance", balanceNum.toString());
+    }
 
     if (partnerEmail !== NO_PARTNER_VALUE) {
       params.set("partner", partnerEmail);
@@ -140,6 +148,23 @@ export function SimulationControlPanel(props: {
             value={date}
             onChange={setDate}
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <label htmlFor="sim-opening-balance" className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Opening Balance
+          </label>
+          <input
+            id="sim-opening-balance"
+            type="number"
+            value={openingBalance}
+            onChange={(e) => setOpeningBalance(e.target.value)}
+            placeholder="0"
+            className="w-full h-11 px-4 rounded-2xl bg-white/70 dark:bg-black/20 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-[11px] text-slate-500">Saldo akhir bulan sebelum simulasi dimulai</p>
         </div>
       </div>
 

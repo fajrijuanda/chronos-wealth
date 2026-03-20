@@ -248,12 +248,21 @@ async function simulateUserBoothPlan(input: {
         amount: true,
       },
     }),
+
     prisma.budgetLimit.aggregate({
       _sum: {
         maxLimit: true,
       },
     }),
   ]);
+
+  // Build map from booth name to expectedDate for BOOTH category income sources
+  const boothIncomeStartDates = new Map<string, Date>();
+  for (const income of incomeSources) {
+    if (income.category === CategoryType.BOOTH && income.expectedDate) {
+      boothIncomeStartDates.set(income.name, income.expectedDate);
+    }
+  }
 
   const revenuePerBooth = target?.revenuePerBooth ?? input.simUser.revenuePerBooth;
   const targetBoothEquivalent = target?.targetBoothEquivalent ?? 0;
@@ -555,7 +564,14 @@ async function simulateUserBoothPlan(input: {
       }
 
       // Booth income starts from the month after MoU (not in signing month).
-      if (boothActiveInMonth && monthsSinceMou >= 1) {
+      // But if booth has expected start date from IncomeSource, use that instead.
+      const expectedIncomeDate = boothIncomeStartDates.get(booth.name);
+      const incomeStartMonth = expectedIncomeDate ? startOfMonth(expectedIncomeDate) : null;
+      const shouldIncludeIncome = incomeStartMonth
+        ? startOfMonth(monthDate) >= incomeStartMonth
+        : monthsSinceMou >= 1;
+
+      if (boothActiveInMonth && shouldIncludeIncome) {
         const extraUnits = exclusiveExtraUnitsByOwnershipId.get(ownership.id) ?? 0;
         const baseUnits =
           booth.packageType === BoothPackageType.EXCLUSIVE && !booth.isShared
@@ -786,6 +802,7 @@ export async function simulateCollaborativeGrowth(input: {
   startDate: Date;
   primaryEmail: string;
   partnerEmail: string;
+  openingBalance?: number;
   scenarioOptions?: SimulationScenarioOptions;
 }) {
   const scenarioOptions: SimulationScenarioOptions = {
@@ -803,7 +820,7 @@ export async function simulateCollaborativeGrowth(input: {
         fallbackBoothPrice: 7_500_000,
         fallbackExpenseMin: 1_000_000,
         fallbackExpenseMax: 1_000_000,
-        fallbackOpeningBalance: 0,
+        fallbackOpeningBalance: input.openingBalance ?? 0,
         fallbackPurchaseTiming: BoothPurchaseTiming.START_OF_MONTH,
         revenuePerBooth: 1_000_000,
       },
@@ -817,7 +834,7 @@ export async function simulateCollaborativeGrowth(input: {
         fallbackBoothPrice: 9_500_000,
         fallbackExpenseMin: 2_000_000,
         fallbackExpenseMax: 2_500_000,
-        fallbackOpeningBalance: 0,
+        fallbackOpeningBalance: input.openingBalance ?? 0,
         fallbackPurchaseTiming: BoothPurchaseTiming.END_OF_MONTH,
         revenuePerBooth: 1_000_000,
       },
@@ -983,6 +1000,7 @@ export async function simulateSingleUserGrowth(input: {
   targetDate: Date;
   startDate: Date;
   email: string;
+  openingBalance?: number;
   scenarioOptions?: SimulationScenarioOptions;
 }) {
   const scenarioOptions: SimulationScenarioOptions = {
@@ -999,7 +1017,7 @@ export async function simulateSingleUserGrowth(input: {
       fallbackBoothPrice: 7_500_000,
       fallbackExpenseMin: 1_000_000,
       fallbackExpenseMax: 1_000_000,
-      fallbackOpeningBalance: 0,
+      fallbackOpeningBalance: input.openingBalance ?? 0,
       fallbackPurchaseTiming: BoothPurchaseTiming.START_OF_MONTH,
       revenuePerBooth: 1_000_000,
     },

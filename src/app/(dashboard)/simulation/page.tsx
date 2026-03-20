@@ -27,6 +27,7 @@ type SimulationParticipant = {
     month: string;
     purchaseDay: number;
     unitTotalOwned: number;
+    cashBeforePurchase: number;
     boothsAdded: number;
     boothsAvailableToBuy: number;
     monthlyIncome: number;
@@ -200,6 +201,8 @@ export default async function SimulationPage({
   const partnerEmailRaw = typeof sp.partner === "string" ? sp.partner.trim().toLowerCase() : "";
   const eventFilterRaw = typeof sp.eventFilter === "string" ? sp.eventFilter : "all";
   const delimiterRaw = typeof sp.delimiter === "string" ? sp.delimiter : "comma";
+  const openingBalanceRaw = typeof sp.openingBalance === "string" ? parseFloat(sp.openingBalance) : 0;
+  const openingBalance = Number.isFinite(openingBalanceRaw) ? openingBalanceRaw : 0;
   const includeExtraBoothCommission = sp.extraBoothCommission === "1";
   const includeExtraCashierPartners = sp.extraCashierPartners === "1";
   const includeExtraFreelance = sp.extraFreelance === "1";
@@ -228,6 +231,7 @@ export default async function SimulationPage({
         startDate,
         primaryEmail: activeEmail,
         partnerEmail: selectedFriend.friend.email,
+        openingBalance,
         scenarioOptions: {
           includeExtraBoothCommission,
           includeExtraCashierPartners,
@@ -238,6 +242,7 @@ export default async function SimulationPage({
         targetDate,
         startDate,
         email: activeEmail,
+        openingBalance,
         scenarioOptions: {
           includeExtraBoothCommission,
           includeExtraCashierPartners,
@@ -429,6 +434,7 @@ export default async function SimulationPage({
                       <tr>
                         <th className="px-3 py-2">Month</th>
                         <th className="px-3 py-2">Total Booth</th>
+                        <th className="px-3 py-2">Opening Balance</th>
                         <th className="px-3 py-2">Add Booth</th>
                         <th className="px-3 py-2">Booth Income</th>
                         <th className="px-3 py-2">Booth Commission</th>
@@ -451,6 +457,7 @@ export default async function SimulationPage({
                           <tr key={`${user.userId}-${plan.month}`}>
                             <td className="px-3 py-2">{plan.month}</td>
                             <td className="px-3 py-2">{formatUnitTotal(plan.unitTotalOwned)}</td>
+                            <td className="px-3 py-2 text-slate-600 dark:text-slate-400">Rp {formatGroupedNumber(plan.cashBeforePurchase)}</td>
                             <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
@@ -466,7 +473,7 @@ export default async function SimulationPage({
                                       className={`inline-flex items-center rounded-md border px-2 py-1 ${getEventBadgeClass(event.type)}`}
                                       title={formatContractEvent(event)}
                                     >
-                                      {getEventTypeLabel(event.type)} H{event.day}
+                                      {getEventTypeLabel(event.type)} {event.type === "partner_suggestion" && event.amount > 0 ? `(Rp ${formatGroupedNumber(event.amount)})` : ''} H{event.day}
                                     </span>
                                   ))}
                                 </div>
