@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { ensureAppUserByEmail } from "@/actions/collaboration";
 import { getSessionUserEmail } from "@/lib/auth-session";
 import { isSuperAdminEmail } from "@/lib/active-user";
+import { addMonths } from "date-fns";
 
 async function getSessionActor() {
   const sessionEmail = await getSessionUserEmail();
@@ -66,8 +67,18 @@ export async function createIncomeSource(data: {
   expectedDate?: Date | null;
   ownerUserId?: string | null;
 }) {
+  let contractEndDate: Date | null = null;
+  
+  // For recurring COMMISSION category, set contract end date to 2 years (24 months) from expectedDate
+  if (data.isRecurring && data.category === CategoryType.COMMISSION && data.expectedDate) {
+    contractEndDate = addMonths(data.expectedDate, 24);
+  }
+  
   const result = await prisma.incomeSource.create({
-    data,
+    data: {
+      ...data,
+      contractEndDate,
+    },
   });
   revalidatePath("/income");
   return result;

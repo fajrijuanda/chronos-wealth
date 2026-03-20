@@ -94,6 +94,7 @@ export function AssetsPortfolioTable({
         </div>
       ),
       exportValue: (row) => row.name,
+      sortValue: (row) => row.name,
     },
     {
       key: "category",
@@ -109,18 +110,21 @@ export function AssetsPortfolioTable({
         );
       },
       exportValue: (row) => getTypeMeta(row.assetType).label,
+      sortValue: (row) => getTypeMeta(row.assetType).label,
     },
     {
       key: "package",
       label: "Plan",
       render: (row) => row.packageLabel,
       exportValue: (row) => row.packageLabel,
+      sortValue: (row) => row.packageLabel,
     },
     {
       key: "value",
       label: "Value",
       render: (row) => <span className="font-semibold">Rp {formatGroupedNumber(row.value)}</span>,
       exportValue: (row) => row.value,
+      sortValue: (row) => row.value,
     },
     {
       key: "detail",
@@ -132,6 +136,7 @@ export function AssetsPortfolioTable({
         </div>
       ),
       exportValue: (row) => `${row.detail} ${row.acquiredAt ? `(${formatJakartaDate(row.acquiredAt)})` : ""}`,
+      sortValue: (row) => row.acquiredAt || "",
     },
     {
       key: "status",
@@ -142,6 +147,7 @@ export function AssetsPortfolioTable({
         </span>
       ),
       exportValue: (row) => row.status,
+      sortValue: (row) => row.status,
     },
     {
       key: "actions",
@@ -164,6 +170,7 @@ export function AssetsPortfolioTable({
           <span className="text-xs text-muted-foreground">-</span>
         ),
       exportValue: () => "",
+      disableSort: true,
     },
   ];
 

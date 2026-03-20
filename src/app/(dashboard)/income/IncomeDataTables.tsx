@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CircleOff, Wallet } from "lucide-react";
+import { CheckCircle2, CircleOff, Wallet, Briefcase, Code2, TrendingUp, Coins, Building2 } from "lucide-react";
 import { CategoryType } from "@prisma/client";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate, formatJakartaDateTime } from "@/lib/date-format";
@@ -29,6 +29,54 @@ type SalesRow = {
   uploadedAt: Date;
 };
 
+function getCategoryBadge(category: CategoryType) {
+  const categoryConfig: Record<CategoryType, { label: string; icon: React.ReactNode; bgColor: string; textColor: string }> = {
+    SALARY: {
+      label: "Salary",
+      icon: <Briefcase className="h-3.5 w-3.5" />,
+      bgColor: "bg-blue-100 dark:bg-blue-900/35",
+      textColor: "text-blue-700 dark:text-blue-300"
+    },
+    PROJECT: {
+      label: "Project",
+      icon: <Code2 className="h-3.5 w-3.5" />,
+      bgColor: "bg-purple-100 dark:bg-purple-900/35",
+      textColor: "text-purple-700 dark:text-purple-300"
+    },
+    COMMISSION: {
+      label: "Commission",
+      icon: <TrendingUp className="h-3.5 w-3.5" />,
+      bgColor: "bg-amber-100 dark:bg-amber-900/35",
+      textColor: "text-amber-700 dark:text-amber-300"
+    },
+    STOCK: {
+      label: "Stock",
+      icon: <Coins className="h-3.5 w-3.5" />,
+      bgColor: "bg-cyan-100 dark:bg-cyan-900/35",
+      textColor: "text-cyan-700 dark:text-cyan-300"
+    },
+    SAAS: {
+      label: "SaaS",
+      icon: <Code2 className="h-3.5 w-3.5" />,
+      bgColor: "bg-green-100 dark:bg-green-900/35",
+      textColor: "text-green-700 dark:text-green-300"
+    },
+    BOOTH: {
+      label: "Booth",
+      icon: <Building2 className="h-3.5 w-3.5" />,
+      bgColor: "bg-rose-100 dark:bg-rose-900/35",
+      textColor: "text-rose-700 dark:text-rose-300"
+    },
+  };
+
+  const config = categoryConfig[category];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold ${config.bgColor} ${config.textColor}`}>
+      {config.icon} {config.label}
+    </span>
+  );
+}
+
 export function IncomeDataTables({
   incomes,
   salesHistory,
@@ -51,18 +99,31 @@ export function IncomeDataTables({
         </div>
       ),
       exportValue: (row) => row.name,
+      sortValue: (row) => row.name,
     },
     {
       key: "role",
       label: "Category",
-      render: (row) => row.category,
-      exportValue: (row) => row.category,
+      render: (row) => getCategoryBadge(row.category),
+      exportValue: (row) => {
+        const categoryConfig: Record<CategoryType, string> = {
+          SALARY: "Salary",
+          PROJECT: "Project",
+          COMMISSION: "Commission",
+          STOCK: "Stock",
+          SAAS: "SaaS",
+          BOOTH: "Booth",
+        };
+        return categoryConfig[row.category];
+      },
+      sortValue: (row) => row.category,
     },
     {
       key: "plan",
       label: "Plan",
       render: (row) => (row.isRecurring ? "Recurring" : "One-Time"),
       exportValue: (row) => (row.isRecurring ? "Recurring" : "One-Time"),
+      sortValue: (row) => (row.isRecurring ? "Recurring" : "One-Time"),
     },
     {
       key: "billing",
@@ -71,6 +132,7 @@ export function IncomeDataTables({
         <span className="font-semibold text-emerald-600 dark:text-emerald-400">Rp {formatGroupedNumber(row.amount)}</span>
       ),
       exportValue: (row) => row.amount,
+      sortValue: (row) => row.amount,
     },
     {
       key: "schedule",
@@ -87,6 +149,7 @@ export function IncomeDataTables({
             ? `Every ${row.payoutDate ?? "-"}th (from ${formatJakartaDate(row.expectedDate)})`
             : `Every ${row.payoutDate ?? "-"}th`
           : (row.expectedDate ? formatJakartaDate(row.expectedDate) : "-"),
+      sortValue: (row) => row.expectedDate || "",
     },
     {
       key: "status",
@@ -103,6 +166,7 @@ export function IncomeDataTables({
         )
       ),
       exportValue: (row) => (row.isActive ? "Active" : "Inactive"),
+      sortValue: (row) => (row.isActive ? "Active" : "Inactive"),
     },
     {
       key: "actions",
@@ -115,6 +179,7 @@ export function IncomeDataTables({
         </div>
       ),
       exportValue: () => "",
+      disableSort: true,
     },
   ];
 
@@ -131,36 +196,42 @@ export function IncomeDataTables({
       label: "Period",
       render: (row) => `${row.month}/${row.year}`,
       exportValue: (row) => `${row.month}/${row.year}`,
+      sortValue: (row) => row.year * 100 + row.month,
     },
     {
       key: "booth",
       label: "Booth",
       render: (row) => <span className="font-semibold">{row.boothName}</span>,
       exportValue: (row) => row.boothName,
+      sortValue: (row) => row.boothName,
     },
     {
       key: "gross",
       label: "Gross",
       render: (row) => `Rp ${formatGroupedNumber(row.grossIncome)}`,
       exportValue: (row) => row.grossIncome,
+      sortValue: (row) => row.grossIncome,
     },
     {
       key: "net",
       label: "Net",
       render: (row) => (row.netIncome !== null ? `Rp ${formatGroupedNumber(row.netIncome)}` : "-"),
       exportValue: (row) => row.netIncome ?? 0,
+      sortValue: (row) => row.netIncome ?? 0,
     },
     {
       key: "uploadedBy",
       label: "Uploaded By",
       render: (row) => row.uploadedBy,
       exportValue: (row) => row.uploadedBy,
+      sortValue: (row) => row.uploadedBy,
     },
     {
       key: "uploadedAt",
       label: "Uploaded At",
       render: (row) => formatJakartaDateTime(row.uploadedAt),
       exportValue: (row) => formatJakartaDateTime(row.uploadedAt),
+      sortValue: (row) => row.uploadedAt,
     },
   ];
 

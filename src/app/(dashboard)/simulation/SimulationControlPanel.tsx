@@ -48,6 +48,7 @@ export function SimulationControlPanel(props: {
   activeEmail: string;
   basePrice: number;
   initialTargetDate: string;
+  initialStartDate: string;
   initialPartnerEmail: string;
   initialDelimiter: CsvDelimiter;
   initialEventFilter: EventFilter;
@@ -59,6 +60,7 @@ export function SimulationControlPanel(props: {
 }) {
   const router = useRouter();
 
+  const [startDate, setStartDate] = useState(props.initialStartDate);
   const [date, setDate] = useState(props.initialTargetDate);
   const [partnerEmail, setPartnerEmail] = useState(
     props.initialPartnerEmail || NO_PARTNER_VALUE,
@@ -78,6 +80,7 @@ export function SimulationControlPanel(props: {
   const applySimulation = () => {
     const params = new URLSearchParams();
 
+    params.set("startDate", startDate);
     params.set("date", date);
     params.set("delimiter", delimiter);
     params.set("eventFilter", eventFilter);
@@ -118,6 +121,17 @@ export function SimulationControlPanel(props: {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
+          <label htmlFor="sim-start-date" className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Start Month
+          </label>
+          <DatePickerCalendar
+            id="sim-start-date"
+            value={startDate}
+            onChange={setStartDate}
+          />
+        </div>
+
+        <div className="space-y-2">
           <label htmlFor="sim-target-date" className="text-xs font-black uppercase tracking-widest text-slate-400">
             Target Date
           </label>
@@ -127,9 +141,13 @@ export function SimulationControlPanel(props: {
             onChange={setDate}
           />
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Partner (Optional)</label>
+          <label htmlFor="sim-partner-email" className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Partner
+          </label>
           <Select value={partnerEmail} onValueChange={setPartnerEmail}>
             <SelectTrigger className="h-11 w-full rounded-2xl bg-white/70 dark:bg-black/20">
               <SelectValue placeholder="Tanpa partner (simulasi pribadi)" />
@@ -143,6 +161,9 @@ export function SimulationControlPanel(props: {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
           {props.acceptedFriends.length === 0 ? (
             <p className="text-[11px] text-amber-600 dark:text-amber-400">
               Belum ada teman accepted. Tambahkan koneksi di Profile tab Connect.

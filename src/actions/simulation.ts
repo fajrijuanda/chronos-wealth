@@ -218,6 +218,7 @@ export async function calculateSimulation(
 
 async function simulateUserBoothPlan(input: {
   targetDate: Date;
+  startDate: Date;
   simUser: SimUserInput;
   scenarioOptions: SimulationScenarioOptions;
 }) {
@@ -337,11 +338,12 @@ async function simulateUserBoothPlan(input: {
     monthlyNonBoothIncome: number;
     boothsAdded: number;
     totalBoothsEquivalent: number;
+    boothsAvailableToBuy: number;
     monthEndCash: number;
     contractEvents: ContractEvent[];
   }> = [];
 
-  const start = startOfMonth(new Date());
+  const start = startOfMonth(input.startDate);
   const totalMonths = differenceInMonths(startOfMonth(input.targetDate), start);
   let previousMonthEndCash = 0;
 
@@ -382,6 +384,11 @@ async function simulateUserBoothPlan(input: {
 
       if (income.isRecurring) {
         if (income.expectedDate && startOfMonth(monthDate) < startOfMonth(income.expectedDate)) {
+          continue;
+        }
+
+        // Check if contract has ended (for COMMISSION category with contractEndDate)
+        if (income.category === CategoryType.COMMISSION && income.contractEndDate && startOfMonth(monthDate) > startOfMonth(income.contractEndDate)) {
           continue;
         }
 
@@ -699,8 +706,10 @@ async function simulateUserBoothPlan(input: {
     const actualPt2Saved = 0;
 
     cash += incomeAfterPurchase;
+    const cashBeforeExpense = cash;
+    const boothsAvailableToBuy = boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
     cash -= monthlyExpense;
-    previousMonthEndCash = cash;
+    previousMonthEndCash = cashBeforeExpense;
 
     for (let addedIndex = 0; addedIndex < boothsAdded; addedIndex++) {
       const simulatedPayoutDay = contractDayAfterPurchase(purchaseDay);
@@ -738,7 +747,8 @@ async function simulateUserBoothPlan(input: {
       monthlyNonBoothIncome,
       boothsAdded,
       totalBoothsEquivalent: incomeEquivalent,
-      monthEndCash: cash,
+      boothsAvailableToBuy,
+      monthEndCash: cashBeforeExpense,
       contractEvents,
     });
   }
@@ -773,6 +783,7 @@ async function simulateUserBoothPlan(input: {
 
 export async function simulateCollaborativeGrowth(input: {
   targetDate: Date;
+  startDate: Date;
   primaryEmail: string;
   partnerEmail: string;
   scenarioOptions?: SimulationScenarioOptions;
@@ -786,6 +797,7 @@ export async function simulateCollaborativeGrowth(input: {
   const [primary, partner] = await Promise.all([
     simulateUserBoothPlan({
       targetDate: input.targetDate,
+      startDate: input.startDate,
       simUser: {
         email: input.primaryEmail,
         fallbackBoothPrice: 7_500_000,
@@ -799,6 +811,7 @@ export async function simulateCollaborativeGrowth(input: {
     }),
     simulateUserBoothPlan({
       targetDate: input.targetDate,
+      startDate: input.startDate,
       simUser: {
         email: input.partnerEmail,
         fallbackBoothPrice: 9_500_000,
@@ -968,6 +981,7 @@ export async function simulateCollaborativeGrowth(input: {
 
 export async function simulateSingleUserGrowth(input: {
   targetDate: Date;
+  startDate: Date;
   email: string;
   scenarioOptions?: SimulationScenarioOptions;
 }) {
@@ -979,6 +993,7 @@ export async function simulateSingleUserGrowth(input: {
 
   const primary = await simulateUserBoothPlan({
     targetDate: input.targetDate,
+    startDate: input.startDate,
     simUser: {
       email: input.email,
       fallbackBoothPrice: 7_500_000,

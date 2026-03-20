@@ -27,30 +27,35 @@ export function FinancialReportTable({ rows }: { rows: FinancialReportRow[] }) {
       label: "Month",
       render: (row) => row.monthLabel,
       exportValue: (row) => row.monthLabel,
+      sortValue: (row) => row.monthKey,
     },
     {
       key: "income",
       label: "Real Income",
       render: (row) => <span className="font-semibold text-emerald-600 dark:text-emerald-400">Rp {formatGroupedNumber(row.incomeTotal)}</span>,
       exportValue: (row) => row.incomeTotal,
+      sortValue: (row) => row.incomeTotal,
     },
     {
       key: "boothIncome",
       label: "Booth",
       render: (row) => `Rp ${formatGroupedNumber(row.boothIncome)}`,
       exportValue: (row) => row.boothIncome,
+      sortValue: (row) => row.boothIncome,
     },
     {
       key: "nonBoothIncome",
       label: "Non-Booth",
       render: (row) => `Rp ${formatGroupedNumber(row.nonBoothIncome)}`,
       exportValue: (row) => row.nonBoothIncome,
+      sortValue: (row) => row.nonBoothIncome,
     },
     {
       key: "expense",
       label: "Real Expense",
       render: (row) => <span className="font-semibold text-rose-600 dark:text-rose-400">Rp {formatGroupedNumber(row.expenseTotal)}</span>,
       exportValue: (row) => row.expenseTotal,
+      sortValue: (row) => row.expenseTotal,
     },
     {
       key: "net",
@@ -61,6 +66,7 @@ export function FinancialReportTable({ rows }: { rows: FinancialReportRow[] }) {
         </span>
       ),
       exportValue: (row) => row.netCashflow,
+      sortValue: (row) => row.netCashflow,
     },
     {
       key: "projectedNet",
@@ -71,6 +77,7 @@ export function FinancialReportTable({ rows }: { rows: FinancialReportRow[] }) {
         </span>
       ),
       exportValue: (row) => row.projectedNet,
+      sortValue: (row) => row.projectedNet,
     },
     {
       key: "variance",
@@ -81,18 +88,21 @@ export function FinancialReportTable({ rows }: { rows: FinancialReportRow[] }) {
         </span>
       ),
       exportValue: (row) => row.netVariance,
+      sortValue: (row) => row.netVariance,
     },
     {
       key: "txCount",
       label: "Tx Count",
       render: (row) => `${row.incomeTxCount + row.expenseTxCount}`,
       exportValue: (row) => row.incomeTxCount + row.expenseTxCount,
+      sortValue: (row) => row.incomeTxCount + row.expenseTxCount,
     },
     {
       key: "closing",
       label: "Cumulative",
       render: (row) => `Rp ${formatGroupedNumber(row.closingBalance)}`,
       exportValue: (row) => row.closingBalance,
+      sortValue: (row) => row.closingBalance,
     },
   ];
 

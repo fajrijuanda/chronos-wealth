@@ -28,6 +28,7 @@ type SimulationParticipant = {
     purchaseDay: number;
     unitTotalOwned: number;
     boothsAdded: number;
+    boothsAvailableToBuy: number;
     monthlyIncome: number;
     monthlyExpense: number;
     monthlyBoothIncome: number;
@@ -193,6 +194,8 @@ export default async function SimulationPage({
   const activeEmail = await getActiveUserEmail(
     typeof sp.user === "string" ? sp.user : undefined,
   );
+  const today = new Date();
+  const startDateStr = typeof sp.startDate === "string" ? sp.startDate : today.toISOString().split("T")[0];
   const targetDateStr = typeof sp.date === "string" ? sp.date : "2028-08-01";
   const partnerEmailRaw = typeof sp.partner === "string" ? sp.partner.trim().toLowerCase() : "";
   const eventFilterRaw = typeof sp.eventFilter === "string" ? sp.eventFilter : "all";
@@ -212,6 +215,7 @@ export default async function SimulationPage({
   const delimiter: CsvDelimiter = delimiterRaw === "semicolon" ? "semicolon" : "comma";
 
   const targetDate = new Date(targetDateStr);
+  const startDate = new Date(startDateStr);
   const workspace = await getCollaborationWorkspace(activeEmail);
   const acceptedFriends = workspace.friendships.filter((friendship) => friendship.status === "ACCEPTED");
   const selectedFriend = acceptedFriends.find(
@@ -221,6 +225,7 @@ export default async function SimulationPage({
   const simulation: SingleSimulation | CollaborativeSimulation = selectedFriend
     ? await simulateCollaborativeGrowth({
         targetDate,
+        startDate,
         primaryEmail: activeEmail,
         partnerEmail: selectedFriend.friend.email,
         scenarioOptions: {
@@ -231,6 +236,7 @@ export default async function SimulationPage({
       })
     : await simulateSingleUserGrowth({
         targetDate,
+        startDate,
         email: activeEmail,
         scenarioOptions: {
           includeExtraBoothCommission,
@@ -290,6 +296,7 @@ export default async function SimulationPage({
               displayName: friendship.friend.displayName,
             }))}
             financeProfile={workspace.financeProfile}
+            initialStartDate={startDateStr}
             initialExtraBoothCommission={includeExtraBoothCommission}
             initialExtraCashierPartners={includeExtraCashierPartners}
             initialExtraFreelance={includeExtraFreelance}
@@ -421,7 +428,7 @@ export default async function SimulationPage({
                     <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
                       <tr>
                         <th className="px-3 py-2">Month</th>
-                        <th className="px-3 py-2">Unit Total (Currently)</th>
+                        <th className="px-3 py-2">Total Booth</th>
                         <th className="px-3 py-2">Add Booth</th>
                         <th className="px-3 py-2">Booth Income</th>
                         <th className="px-3 py-2">Booth Commission</th>
@@ -429,8 +436,8 @@ export default async function SimulationPage({
                         <th className="px-3 py-2">Total Income</th>
                         <th className="px-3 py-2">Expense (Budget)</th>
                         <th className="px-3 py-2">Contract Events</th>
-                        <th className="px-3 py-2">Income Eq.</th>
-                        <th className="px-3 py-2">End Cash</th>
+                        <th className="px-3 py-2">Booths Available</th>
+                        <th className="px-3 py-2">End Cash (Before Expense)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -467,7 +474,7 @@ export default async function SimulationPage({
                                 <span className="text-slate-500 dark:text-slate-400">-</span>
                               )}
                             </td>
-                            <td className="px-3 py-2">{plan.totalBoothsEquivalent.toFixed(2)}</td>
+                            <td className="px-3 py-2 text-blue-600 font-semibold">{plan.boothsAvailableToBuy}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthEndCash)}</td>
                           </tr>
                         );

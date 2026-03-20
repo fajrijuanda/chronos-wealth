@@ -23,6 +23,7 @@ import { useStatus } from "@/components/providers/StatusProvider";
 import { createIncomeSourceByEmail } from "@/actions/income";
 import { CategoryType } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import DatePickerCalendar from "@/components/ui/DatePickerCalendar";
 
 const DEFAULT_OPTIONS: Array<{ value: CategoryType; label: string }> = [
   { value: "SALARY", label: "Salary" },
@@ -46,6 +47,8 @@ export function AddIncomeDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [categoryValue, setCategoryValue] = useState<CategoryType>(options[0]?.value ?? "SALARY");
   const [scheduleMode, setScheduleMode] = useState<"RECURRING" | "ONE_TIME">("RECURRING");
+  const [startDate, setStartDate] = useState<string>("");
+  const [expectedDate, setExpectedDate] = useState<string>("");
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -73,8 +76,8 @@ export function AddIncomeDialog({
     const category = String(formData.get("category") ?? "SALARY") as CategoryType;
     const isRecurring = formData.get("isRecurring") === "on";
     const payoutDate = Number(formData.get("payoutDate") || 1);
-    const expectedDateStr = String(formData.get("expectedDate") ?? "");
-    const startDateStr = String(formData.get("startDate") ?? "");
+    const expectedDateStr = expectedDate;
+    const startDateStr = startDate;
     const parsedStartDate = parseDateInputToUtcNoon(startDateStr);
     const effectiveIsRecurring = isBoothCategory || (scheduleMode === "RECURRING" && isRecurring);
     const effectivePayoutDate = effectiveIsRecurring ? payoutDate : null;
@@ -164,6 +167,10 @@ export function AddIncomeDialog({
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm text-slate-600 dark:text-slate-300">
                 Kategori Booth selalu <span className="font-semibold">Recurring Bulanan</span>.
               </div>
+            ) : categoryValue === "COMMISSION" ? (
+              <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
+                <span className="font-semibold">Komisi Recurring:</span> Kontrak berlaku selama <span className="font-bold">2 tahun (24 bulan)</span> dari tanggal mulai. Jika ada renewal, kontrak baru dimulai lagi.
+              </div>
             ) : (
               <>
                 <label htmlFor="income-schedule-mode" className="text-sm font-medium">Pola Jadwal</label>
@@ -202,13 +209,11 @@ export function AddIncomeDialog({
                     </div>
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="income-start-date" className="text-sm font-medium italic text-slate-500">Mulai gajian dari tanggal:</label>
-                  <input
+                  <label className="text-sm font-medium italic text-slate-500">Mulai gajian dari tanggal:</label>
+                  <DatePickerCalendar
                     id="income-start-date"
-                    name="startDate"
-                    type="date"
-                    required={!isBoothCategory}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                    value={startDate}
+                    onChange={setStartDate}
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Contoh: mulai kerja 1 April, gajian pertama 1 Mei. Isi tanggal pertama kali cair.
@@ -217,13 +222,11 @@ export function AddIncomeDialog({
               </>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="income-expected-date" className="text-sm font-medium italic text-slate-500">Sekali cair pada tanggal:</label>
-                <input
+                <label className="text-sm font-medium italic text-slate-500">Sekali cair pada tanggal:</label>
+                <DatePickerCalendar
                   id="income-expected-date"
-                  name="expectedDate"
-                  type="date"
-                  required
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent px-4 py-2"
+                  value={expectedDate}
+                  onChange={setExpectedDate}
                 />
               </div>
             )}

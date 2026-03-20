@@ -12,6 +12,8 @@ import {
   FileSpreadsheet,
   Braces,
   FileType2,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +45,8 @@ type TableColumn<T> = {
   headerClassName?: string;
   render: (row: T) => ReactNode;
   exportValue?: (row: T) => string | number;
+  sortValue?: (row: T) => string | number | Date | null | undefined;
+  disableSort?: boolean;
 };
 
 type ManagementTableProps<T extends { id: string }> = {
@@ -92,13 +96,15 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const normalizedQuery = query.trim().toLowerCase();
 
   const filteredRows = useMemo(() => {
     const filterDef = filters?.find((item) => item.value === activeFilter);
 
-    return rows.filter((row) => {
+    let sorted = rows.filter((row) => {
       const passFilter = filterDef ? filterDef.predicate(row) : true;
       const passSearch = normalizedQuery.length === 0
         ? true
@@ -106,7 +112,39 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
 
       return passFilter && passSearch;
     });
-  }, [rows, filters, activeFilter, normalizedQuery, searchableText]);
+
+    // Apply sorting
+    if (sortKey) {
+      const sortColumn = columns.find((col) => col.key === sortKey);
+      if (sortColumn && sortColumn.sortValue && !sortColumn.disableSort) {
+        sorted = [...sorted].sort((a, b) => {
+          const aVal = sortColumn.sortValue!(a);
+          const bVal = sortColumn.sortValue!(b);
+
+          // Handle null/undefined
+          if (aVal == null && bVal == null) return 0;
+          if (aVal == null) return sortDirection === "asc" ? 1 : -1;
+          if (bVal == null) return sortDirection === "asc" ? -1 : 1;
+
+          // Compare values
+          let cmp = 0;
+          if (aVal instanceof Date && bVal instanceof Date) {
+            cmp = aVal.getTime() - bVal.getTime();
+          } else if (typeof aVal === "string" && typeof bVal === "string") {
+            cmp = aVal.localeCompare(bVal);
+          } else if (typeof aVal === "number" && typeof bVal === "number") {
+            cmp = aVal - bVal;
+          } else {
+            cmp = String(aVal).localeCompare(String(bVal));
+          }
+
+          return sortDirection === "asc" ? cmp : -cmp;
+        });
+      }
+    }
+
+    return sorted;
+  }, [rows, filters, activeFilter, normalizedQuery, searchableText, sortKey, sortDirection, columns]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -152,6 +190,19 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
       }
       return next;
     });
+  }
+
+  function handleSortClick(columnKey: string, disableSort?: boolean) {
+    if (disableSort) return;
+    
+    if (sortKey === columnKey) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new sort column with asc direction
+      setSortKey(columnKey);
+      setSortDirection("asc");
+    }
   }
 
   function getExportMatrix() {
@@ -357,11 +408,34 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
               <th className="w-10 px-3 py-3">
                 <input type="checkbox" title="Select all rows on this page" checked={allPageSelected} onChange={togglePageSelection} />
               </th>
-              {columns.map((column) => (
-                <th key={column.key} className={`px-3 py-3 font-semibold ${column.headerClassName ?? ""}`}>
-                  {column.label}
-                </th>
-              ))}
+              {columns.map((column) => {
+                const isSortable = column.sortValue && !column.disableSort;
+                const isActive = sortKey === column.key;
+                return (
+                  <th
+                    key={column.key}
+                    className={`px-3 py-3 font-semibold ${column.headerClassName ?? ""} ${isSortable ? "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50" : ""}`}
+                    onClick={() => handleSortClick(column.key, column.disableSort)}
+                  >
+                    <div className="flex items-center gap-1">
+                      {column.label}
+                      {isSortable && (
+                        <span className="text-slate-400 dark:text-slate-500">
+                          {isActive ? (
+                            sortDirection === "asc" ? (
+                              <ArrowUp className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                            ) : (
+                              <ArrowDown className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                            )
+                          ) : (
+                            <div className="h-3.5 w-3.5" />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

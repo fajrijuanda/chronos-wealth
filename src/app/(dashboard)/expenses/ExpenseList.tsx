@@ -59,24 +59,28 @@ export function ExpenseList({ expenses, categories }: { expenses: Expense[], cat
         </div>
       ),
       exportValue: (row) => row.description,
+      sortValue: (row) => row.description,
     },
     {
       key: "category",
       label: "Category",
       render: (row) => row.expenseCategory ?? "UNCATEGORIZED",
       exportValue: (row) => row.expenseCategory ?? "UNCATEGORIZED",
+      sortValue: (row) => row.expenseCategory ?? "UNCATEGORIZED",
     },
     {
       key: "date",
       label: "Date",
       render: (row) => formatJakartaDate(row.date),
       exportValue: (row) => formatJakartaDate(row.date),
+      sortValue: (row) => row.date,
     },
     {
       key: "amount",
       label: "Amount",
       render: (row) => <span className="font-semibold text-rose-600 dark:text-rose-400">Rp {formatGroupedNumber(row.amount)}</span>,
       exportValue: (row) => row.amount,
+      sortValue: (row) => row.amount,
     },
     {
       key: "actions",
@@ -98,6 +102,7 @@ export function ExpenseList({ expenses, categories }: { expenses: Expense[], cat
         </div>
       ),
       exportValue: () => "",
+      disableSort: true,
     },
   ];
 
