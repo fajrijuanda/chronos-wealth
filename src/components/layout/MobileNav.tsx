@@ -104,10 +104,11 @@ export function MobileNav({
                               href={item.href ?? "#"}
                               onClick={() => setIsOpen(false)}
                               className={cn(
-                                "flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200",
+                                "relative flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200",
+                                "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:rounded-r-lg before:transition-all before:duration-200",
                                 active
-                                  ? "bg-white/75 text-primary font-semibold shadow-[0_10px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/60 dark:bg-white/10"
-                                  : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground",
+                                  ? "bg-white/75 text-primary font-semibold shadow-[0_10px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/60 before:w-1.5 before:bg-primary dark:bg-white/10"
+                                  : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground before:w-0",
                               )}
                             >
                               <Icon className="h-5 w-5" />
@@ -123,14 +124,16 @@ export function MobileNav({
                               onClick={() =>
                                 setOpenGroups((prev) => ({
                                   ...prev,
-                                  [item.key]: !expanded,
+                                  collaboration: item.key === "collaboration" ? !prev.collaboration : false,
+                                  settings: item.key === "settings" ? !prev.settings : false,
                                 }))
                               }
                               className={cn(
-                                "flex w-full items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200",
+                                "relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200",
+                                "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:rounded-r-lg before:transition-all before:duration-200",
                                 active
-                                  ? "bg-white/75 text-primary font-semibold shadow-[0_10px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/60 dark:bg-white/10"
-                                  : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground",
+                                  ? "bg-white/75 text-primary font-semibold shadow-[0_10px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/60 before:w-1.5 before:bg-primary dark:bg-white/10"
+                                  : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground before:w-0",
                               )}
                             >
                               <Icon className="h-5 w-5" />
@@ -145,18 +148,22 @@ export function MobileNav({
                               )}
                             >
                               <div className="space-y-1 border-l border-slate-200/70 pl-3 dark:border-slate-700/70">
-                                {item.children.map((child) => {
+                                {item.children.map((child, index) => {
                                   const childActive = isHrefActive(child.href);
+                                  const staggerDelay = `${index * 50}ms`;
                                   return (
                                     <Link
                                       key={child.href}
                                       href={child.href}
                                       onClick={() => setIsOpen(false)}
+                                      style={{ animationDelay: staggerDelay } as any}
                                       className={cn(
-                                        "flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors",
+                                        "relative flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors",
+                                        "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:rounded-r-lg before:transition-all before:duration-200",
+                                        "animate-in fade-in slide-in-from-bottom-1 duration-300",
                                         childActive
-                                          ? "bg-white/82 text-primary font-semibold ring-1 ring-white/70 dark:bg-white/10"
-                                          : "text-slate-600 hover:bg-white/75 dark:text-slate-300 dark:hover:bg-white/8",
+                                          ? "bg-white/82 text-primary font-semibold ring-1 ring-white/70 before:w-1.5 before:bg-primary dark:bg-white/10"
+                                          : "text-slate-600 hover:bg-white/75 before:w-0 dark:text-slate-300 dark:hover:bg-white/8",
                                       )}
                                     >
                                       <span>{child.name}</span>

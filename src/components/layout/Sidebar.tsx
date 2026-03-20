@@ -71,9 +71,10 @@ export function Sidebar({
   });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
     collaboration: true,
-    settings: true,
+    settings: false,
   }));
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
+  const flyoutTimeoutRef = useRef<number | null>(null);
 
   const sections = getSidebarSections(summary.pendingIncomingCount);
 
@@ -90,6 +91,9 @@ export function Sidebar({
     return () => {
       if (transitionTimer.current) {
         window.clearTimeout(transitionTimer.current);
+      }
+      if (flyoutTimeoutRef.current) {
+        window.clearTimeout(flyoutTimeoutRef.current);
       }
     };
   }, []);
@@ -112,20 +116,28 @@ export function Sidebar({
       setFlyoutGroup((prev) => (prev === key ? null : key));
       return;
     }
-    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+    // Auto-collapse other groups when expanding a new one (accordion behavior)
+    setOpenGroups((prev) => ({
+      collaboration: key === "collaboration" ? !prev.collaboration : false,
+      settings: key === "settings" ? !prev.settings : false,
+    }));
   };
 
-  const renderLeafItem = (child: SidebarLeaf) => {
+  const renderLeafItem = (child: SidebarLeaf, index?: number) => {
     const childActive = isHrefActive(child.href);
+    const staggerDelay = index !== undefined ? `${index * 50}ms` : undefined;
     return (
       <Link
         key={child.href}
         href={child.href}
+        style={{ animationDelay: staggerDelay } as any}
         className={cn(
-          "group flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors",
+          "group relative flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors",
+          "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:rounded-r-lg before:transition-all before:duration-200",
+          staggerDelay && "animate-in fade-in slide-in-from-bottom-1 duration-300",
           childActive
-            ? "bg-white/82 text-primary font-semibold ring-1 ring-white/70 dark:bg-white/10"
-            : "text-slate-600 hover:bg-white/75 dark:text-slate-300 dark:hover:bg-white/8",
+            ? "bg-white/82 text-primary font-semibold ring-1 ring-white/70 before:w-1.5 before:bg-primary dark:bg-white/10"
+            : "text-slate-600 hover:bg-white/75 before:w-0 dark:text-slate-300 dark:hover:bg-white/8",
         )}
       >
         <span>{child.name}</span>
@@ -149,11 +161,12 @@ export function Sidebar({
           <Link
             href={item.href ?? "#"}
             className={cn(
-              "flex items-center rounded-2xl transition-all duration-200",
+              "relative flex items-center rounded-2xl transition-all duration-200",
+              "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:rounded-r-lg before:transition-all before:duration-200",
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
               parentActive
-                ? "bg-white/80 text-primary font-semibold shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/70 dark:bg-white/10"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground",
+                ? "bg-white/80 text-primary font-semibold shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/70 before:w-1.5 before:bg-primary dark:bg-white/10"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground before:w-0",
             )}
           >
             <Icon className="h-5 w-5 shrink-0" />
@@ -169,21 +182,34 @@ export function Sidebar({
         key={item.key}
         className="relative space-y-1"
         onMouseEnter={() => {
-          if (collapsed) setFlyoutGroup(item.key);
+          if (collapsed) {
+            if (flyoutTimeoutRef.current) {
+              window.clearTimeout(flyoutTimeoutRef.current);
+            }
+            flyoutTimeoutRef.current = window.setTimeout(() => {
+              setFlyoutGroup(item.key);
+            }, 200);
+          }
         }}
         onMouseLeave={() => {
-          if (collapsed) setFlyoutGroup((prev) => (prev === item.key ? null : prev));
+          if (collapsed) {
+            if (flyoutTimeoutRef.current) {
+              window.clearTimeout(flyoutTimeoutRef.current);
+            }
+            setFlyoutGroup((prev) => (prev === item.key ? null : prev));
+          }
         }}
       >
         <button
           type="button"
           onClick={() => toggleGroup(item.key)}
           className={cn(
-            "w-full rounded-2xl transition-all duration-200",
+            "relative w-full rounded-2xl transition-all duration-200",
+            "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:rounded-r-lg before:transition-all before:duration-200",
             collapsed ? "flex items-center justify-center px-2 py-3" : "flex items-center gap-3 px-3 py-2.5",
             parentActive
-              ? "bg-white/80 text-primary font-semibold ring-1 ring-white/70 shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] dark:bg-white/10"
-              : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground",
+              ? "bg-white/80 text-primary font-semibold ring-1 ring-white/70 shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] before:w-1.5 before:bg-primary dark:bg-white/10"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground before:w-0",
           )}
         >
           <Icon className="h-5 w-5 shrink-0" />
@@ -202,17 +228,17 @@ export function Sidebar({
             )}
           >
             <div className="space-y-1 border-l border-slate-200/70 pl-3 dark:border-slate-700/70">
-              {item.children.map(renderLeafItem)}
+              {item.children.map((child, index) => renderLeafItem(child, index))}
             </div>
           </div>
         ) : null}
 
         {collapsed && expanded ? (
-          <div className="absolute left-full top-0 z-30 ml-3 w-56 rounded-2xl border border-white/60 bg-white/90 p-2 shadow-[0_22px_34px_-24px_rgba(62,69,143,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95">
-            <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="absolute left-full top-1/2 z-30 ml-2 w-60 -translate-y-1/2 rounded-2xl border border-white/50 bg-white/95 p-3 shadow-[0_25px_50px_-12px_rgba(62,69,143,1.1)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-white/10 dark:bg-slate-900/98">
+            <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
               {item.name}
             </p>
-            <div className="space-y-1">{item.children.map(renderLeafItem)}</div>
+            <div className="space-y-0.5">{item.children.map((child, index) => renderLeafItem(child, index))}</div>
           </div>
         ) : null}
       </div>
