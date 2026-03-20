@@ -31,6 +31,12 @@ type SimUserInput = {
   revenuePerBooth: number;
 };
 
+export type SimulationScenarioOptions = {
+  includeExtraBoothCommission: boolean;
+  includeExtraCashierPartners: boolean;
+  includeExtraFreelance: boolean;
+};
+
 type DatedEvent = {
   day: number;
   amount: number;
@@ -51,8 +57,27 @@ type ContractEvent = {
   type: ContractEventType;
 };
 
+type SimulatedEconomyContract = {
+  id: number;
+  purchasedAt: Date;
+  purchaseDay: number;
+  payoutDay: number;
+  capitalAmount: number;
+  monthlyRevenue: number;
+};
+
+const SALARY_DOUBLE_START_MONTH = new Date(2027, 4, 1);
+const EXTRA_BOOTH_COMMISSION_PER_MONTH = 500_000;
+const EXTRA_CASHIER_PARTNERS_PER_MONTH = 4_000_000;
+const EXTRA_FREELANCE_PER_MONTH = 2_000_000;
+
 function clampDay(day: number, min: number, max: number) {
   return Math.max(min, Math.min(max, day));
+}
+
+function contractDayAfterPurchase(day: number) {
+  const nextDay = day + 1;
+  return nextDay > 31 ? 1 : nextDay;
 }
 
 function monthKey(date: Date) {
@@ -69,11 +94,6 @@ function getBoothPayoutDay(packageType: BoothPackageType, mouSignedAt: Date) {
 function getBoothCommissionDay(mouSignedAt: Date, daysInMonth: number) {
   const baseDay = getDate(mouSignedAt);
   return clampDay(baseDay + 3, 1, daysInMonth);
-}
-
-function getExclusiveUnitsFromCapital(capitalAmount: number) {
-  const unit = Math.floor(capitalAmount / 10_000_000);
-  return Math.max(1, unit);
 }
 
 function getContractEventType(label: string): ContractEventType | null {
@@ -98,6 +118,18 @@ function getContractEventType(label: string): ContractEventType | null {
   }
 
   return null;
+}
+
+function getAdjustedIncomeAmount(input: {
+  amount: number;
+  category: CategoryType;
+  monthDate: Date;
+}) {
+  const shouldDoubleSalary =
+    input.category === CategoryType.SALARY &&
+    startOfMonth(input.monthDate) >= startOfMonth(SALARY_DOUBLE_START_MONTH);
+
+  return shouldDoubleSalary ? input.amount * 2 : input.amount;
 }
 
 export async function calculateSimulation(
@@ -187,6 +219,7 @@ export async function calculateSimulation(
 async function simulateUserBoothPlan(input: {
   targetDate: Date;
   simUser: SimUserInput;
+  scenarioOptions: SimulationScenarioOptions;
 }) {
   const user = await ensureAppUserByEmail({
     email: input.simUser.email,
@@ -268,9 +301,8 @@ async function simulateUserBoothPlan(input: {
   }, 0);
 
   let boothEquivalentOwned = existingEquivalent;
-  let simulatedEquivalentAdded = 0;
-  let activeSimulatedBooths = 0;
-  let pendingSimulatedBooths = 0;
+  let simulatedContractId = 1;
+  const simulatedEconomyContracts: SimulatedEconomyContract[] = [];
   const holdingFundAccumulated = 0;
   const pt2FundAccumulated = 0;
 
@@ -318,11 +350,6 @@ async function simulateUserBoothPlan(input: {
     const monthEndDate = lastDayOfMonth(monthDate);
     const daysInMonth = getDate(monthEndDate);
 
-    if (pendingSimulatedBooths > 0) {
-      activeSimulatedBooths += pendingSimulatedBooths;
-      pendingSimulatedBooths = 0;
-    }
-
     const transactionExpense = expenseByMonth[monthKey(monthDate)] ?? 0;
     const monthlyExpense = monthlyBudgetCap > 0
       ? monthlyBudgetCap
@@ -358,6 +385,12 @@ async function simulateUserBoothPlan(input: {
           continue;
         }
 
+        const adjustedIncomeAmount = getAdjustedIncomeAmount({
+          amount: income.amount,
+          category: income.category,
+          monthDate,
+        });
+
         const recurringDay = clampDay(income.payoutDate ?? 1, 1, daysInMonth);
         const firstMonthStartDay = income.expectedDate
           ? clampDay(getDate(income.expectedDate), 1, daysInMonth)
@@ -369,29 +402,62 @@ async function simulateUserBoothPlan(input: {
 
         events.push({
           day: eventDay,
-          amount: income.amount,
+          amount: adjustedIncomeAmount,
           label: income.name,
         });
         if (income.category === CategoryType.COMMISSION) {
-          monthlyCommissionIncome += income.amount;
+          monthlyCommissionIncome += adjustedIncomeAmount;
         } else {
-          monthlyNonBoothIncome += income.amount;
+          monthlyNonBoothIncome += adjustedIncomeAmount;
         }
         continue;
       }
 
       if (income.expectedDate && monthKey(income.expectedDate) === monthKey(monthDate)) {
+        const adjustedIncomeAmount = getAdjustedIncomeAmount({
+          amount: income.amount,
+          category: income.category,
+          monthDate,
+        });
+
         events.push({
           day: clampDay(getDate(income.expectedDate), 1, daysInMonth),
-          amount: income.amount,
+          amount: adjustedIncomeAmount,
           label: income.name,
         });
         if (income.category === CategoryType.COMMISSION) {
-          monthlyCommissionIncome += income.amount;
+          monthlyCommissionIncome += adjustedIncomeAmount;
         } else {
-          monthlyNonBoothIncome += income.amount;
+          monthlyNonBoothIncome += adjustedIncomeAmount;
         }
       }
+    }
+
+    if (input.scenarioOptions.includeExtraBoothCommission) {
+      events.push({
+        day: purchaseDay,
+        amount: EXTRA_BOOTH_COMMISSION_PER_MONTH,
+        label: "Skenario: +2 booth commission/bulan",
+      });
+      monthlyCommissionIncome += EXTRA_BOOTH_COMMISSION_PER_MONTH;
+    }
+
+    if (input.scenarioOptions.includeExtraCashierPartners) {
+      events.push({
+        day: purchaseDay,
+        amount: EXTRA_CASHIER_PARTNERS_PER_MONTH,
+        label: "Skenario: +2 mitra kasir (Rp 2.000.000/mitra)",
+      });
+      monthlyNonBoothIncome += EXTRA_CASHIER_PARTNERS_PER_MONTH;
+    }
+
+    if (input.scenarioOptions.includeExtraFreelance) {
+      events.push({
+        day: purchaseDay,
+        amount: EXTRA_FREELANCE_PER_MONTH,
+        label: "Skenario: freelance tambahan Rp 2.000.000/bulan",
+      });
+      monthlyNonBoothIncome += EXTRA_FREELANCE_PER_MONTH;
     }
 
     let monthlyBoothIncome = 0;
@@ -486,9 +552,9 @@ async function simulateUserBoothPlan(input: {
         const extraUnits = exclusiveExtraUnitsByOwnershipId.get(ownership.id) ?? 0;
         const baseUnits =
           booth.packageType === BoothPackageType.EXCLUSIVE && !booth.isShared
-            ? getExclusiveUnitsFromCapital(ownership.capitalAmount)
+            ? 1
             : booth.boothUnitCount;
-        const effectiveUnits = baseUnits + extraUnits;
+        const effectiveUnits = Math.max(1, baseUnits + extraUnits);
         const incomeAmount =
           booth.expectedMonthlyIncome *
           effectiveUnits *
@@ -526,16 +592,56 @@ async function simulateUserBoothPlan(input: {
       }
     }
 
-    if (activeSimulatedBooths > 0 && revenuePerBooth > 0) {
-      const simulatedIncome = activeSimulatedBooths * revenuePerBooth;
-      events.push({
-        day: purchaseDay,
-        amount: simulatedIncome,
-        label: `Simulated booth payout (${activeSimulatedBooths} unit)`,
-      });
-      monthlyBoothIncome += simulatedIncome;
-      activeEquivalentFromOwned += activeSimulatedBooths;
-      ownedUnitTotal += activeSimulatedBooths;
+    for (const contract of simulatedEconomyContracts) {
+      const monthsSincePurchase = differenceInMonths(
+        startOfMonth(monthDate),
+        startOfMonth(contract.purchasedAt),
+      );
+
+      if (monthsSincePurchase < 0) {
+        continue;
+      }
+
+      const cycleMonths = 24;
+      const isRenewalMonth = monthsSincePurchase > 0 && monthsSincePurchase % cycleMonths === 0;
+      const contractExpired = monthsSincePurchase >= cycleMonths;
+      let boothActiveInMonth = true;
+
+      if (contractExpired && !renewEconomyBoothContracts) {
+        boothActiveInMonth = false;
+      }
+
+      if (isRenewalMonth) {
+        events.push({
+          day: clampDay(contract.purchaseDay, 1, daysInMonth),
+          amount: contract.capitalAmount,
+          label: `Sim Booth ${contract.id} capital return`,
+        });
+
+        if (renewEconomyBoothContracts) {
+          events.push({
+            day: clampDay(contract.purchaseDay, 1, daysInMonth),
+            amount: -contract.capitalAmount,
+            label: `Sim Booth ${contract.id} contract renewal`,
+          });
+        }
+      }
+
+      if (boothActiveInMonth) {
+        ownedUnitTotal += 1;
+      }
+
+      if (boothActiveInMonth && monthsSincePurchase >= 1) {
+        const payoutDay = clampDay(contract.payoutDay, 1, daysInMonth);
+        events.push({
+          day: payoutDay,
+          amount: contract.monthlyRevenue,
+          label: `Sim Booth ${contract.id} payout`,
+        });
+        monthlyBoothIncome += contract.monthlyRevenue;
+        activeEquivalentFromOwned +=
+          revenuePerBooth > 0 ? contract.monthlyRevenue / revenuePerBooth : 0;
+      }
     }
 
     events.sort((a, b) => a.day - b.day);
@@ -596,10 +702,21 @@ async function simulateUserBoothPlan(input: {
     cash -= monthlyExpense;
     previousMonthEndCash = cash;
 
-    simulatedEquivalentAdded += boothsAdded;
-    pendingSimulatedBooths += boothsAdded;
-    boothEquivalentOwned = activeEquivalentFromOwned + simulatedEquivalentAdded;
-    const unitTotalOwned = ownedUnitTotal + simulatedEquivalentAdded;
+    for (let addedIndex = 0; addedIndex < boothsAdded; addedIndex++) {
+      const simulatedPayoutDay = contractDayAfterPurchase(purchaseDay);
+      simulatedEconomyContracts.push({
+        id: simulatedContractId,
+        purchasedAt: new Date(monthDate),
+        purchaseDay,
+        payoutDay: simulatedPayoutDay,
+        capitalAmount: boothPrice,
+        monthlyRevenue: revenuePerBooth,
+      });
+      simulatedContractId += 1;
+    }
+
+    const unitTotalOwned = ownedUnitTotal + boothsAdded;
+    boothEquivalentOwned = unitTotalOwned;
 
     const totalPureIncome =
       monthlyBoothIncome + monthlyCommissionIncome + monthlyNonBoothIncome;
@@ -658,7 +775,14 @@ export async function simulateCollaborativeGrowth(input: {
   targetDate: Date;
   primaryEmail: string;
   partnerEmail: string;
+  scenarioOptions?: SimulationScenarioOptions;
 }) {
+  const scenarioOptions: SimulationScenarioOptions = {
+    includeExtraBoothCommission: input.scenarioOptions?.includeExtraBoothCommission ?? false,
+    includeExtraCashierPartners: input.scenarioOptions?.includeExtraCashierPartners ?? false,
+    includeExtraFreelance: input.scenarioOptions?.includeExtraFreelance ?? false,
+  };
+
   const [primary, partner] = await Promise.all([
     simulateUserBoothPlan({
       targetDate: input.targetDate,
@@ -671,6 +795,7 @@ export async function simulateCollaborativeGrowth(input: {
         fallbackPurchaseTiming: BoothPurchaseTiming.START_OF_MONTH,
         revenuePerBooth: 1_000_000,
       },
+      scenarioOptions,
     }),
     simulateUserBoothPlan({
       targetDate: input.targetDate,
@@ -683,6 +808,7 @@ export async function simulateCollaborativeGrowth(input: {
         fallbackPurchaseTiming: BoothPurchaseTiming.END_OF_MONTH,
         revenuePerBooth: 1_000_000,
       },
+      scenarioOptions,
     }),
   ]);
 
@@ -843,7 +969,14 @@ export async function simulateCollaborativeGrowth(input: {
 export async function simulateSingleUserGrowth(input: {
   targetDate: Date;
   email: string;
+  scenarioOptions?: SimulationScenarioOptions;
 }) {
+  const scenarioOptions: SimulationScenarioOptions = {
+    includeExtraBoothCommission: input.scenarioOptions?.includeExtraBoothCommission ?? false,
+    includeExtraCashierPartners: input.scenarioOptions?.includeExtraCashierPartners ?? false,
+    includeExtraFreelance: input.scenarioOptions?.includeExtraFreelance ?? false,
+  };
+
   const primary = await simulateUserBoothPlan({
     targetDate: input.targetDate,
     simUser: {
@@ -855,6 +988,7 @@ export async function simulateSingleUserGrowth(input: {
       fallbackPurchaseTiming: BoothPurchaseTiming.START_OF_MONTH,
       revenuePerBooth: 1_000_000,
     },
+    scenarioOptions,
   });
 
   return {

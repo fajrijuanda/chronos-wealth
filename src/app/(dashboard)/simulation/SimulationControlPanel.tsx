@@ -53,6 +53,9 @@ export function SimulationControlPanel(props: {
   initialEventFilter: EventFilter;
   acceptedFriends: FriendOption[];
   financeProfile: FinanceProfile | null | undefined;
+  initialExtraBoothCommission: boolean;
+  initialExtraCashierPartners: boolean;
+  initialExtraFreelance: boolean;
 }) {
   const router = useRouter();
 
@@ -62,6 +65,15 @@ export function SimulationControlPanel(props: {
   );
   const [delimiter, setDelimiter] = useState<CsvDelimiter>(props.initialDelimiter);
   const [eventFilter, setEventFilter] = useState<EventFilter>(props.initialEventFilter);
+  const [includeExtraBoothCommission, setIncludeExtraBoothCommission] = useState(
+    props.initialExtraBoothCommission,
+  );
+  const [includeExtraCashierPartners, setIncludeExtraCashierPartners] = useState(
+    props.initialExtraCashierPartners,
+  );
+  const [includeExtraFreelance, setIncludeExtraFreelance] = useState(
+    props.initialExtraFreelance,
+  );
 
   const applySimulation = () => {
     const params = new URLSearchParams();
@@ -72,6 +84,18 @@ export function SimulationControlPanel(props: {
 
     if (partnerEmail !== NO_PARTNER_VALUE) {
       params.set("partner", partnerEmail);
+    }
+
+    if (includeExtraBoothCommission) {
+      params.set("extraBoothCommission", "1");
+    }
+
+    if (includeExtraCashierPartners) {
+      params.set("extraCashierPartners", "1");
+    }
+
+    if (includeExtraFreelance) {
+      params.set("extraFreelance", "1");
     }
 
     router.push(`/simulation?${params.toString()}`);
@@ -157,6 +181,41 @@ export function SimulationControlPanel(props: {
             <SelectItem value="partner_suggestion" className="rounded-xl">Patungan Suggestion</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="surface-card-soft p-4 space-y-3">
+        <h3 className="font-semibold text-sm">Scenario Filter</h3>
+        <p className="text-xs text-body-muted">Aktifkan asumsi tambahan untuk melihat dampaknya ke pertumbuhan booth.</p>
+
+        <label className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200">
+          <input
+            type="checkbox"
+            checked={includeExtraBoothCommission}
+            onChange={(event) => setIncludeExtraBoothCommission(event.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>Tambahan commission 2 booth per bulan (Rp 500.000)</span>
+        </label>
+
+        <label className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200">
+          <input
+            type="checkbox"
+            checked={includeExtraCashierPartners}
+            onChange={(event) => setIncludeExtraCashierPartners(event.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>Tambahan 2 mitra kasir (masing-masing Rp 2.000.000 per bulan)</span>
+        </label>
+
+        <label className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200">
+          <input
+            type="checkbox"
+            checked={includeExtraFreelance}
+            onChange={(event) => setIncludeExtraFreelance(event.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>Tambahan freelance Rp 2.000.000 per bulan</span>
+        </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

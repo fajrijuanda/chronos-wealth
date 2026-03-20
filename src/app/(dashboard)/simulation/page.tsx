@@ -197,6 +197,9 @@ export default async function SimulationPage({
   const partnerEmailRaw = typeof sp.partner === "string" ? sp.partner.trim().toLowerCase() : "";
   const eventFilterRaw = typeof sp.eventFilter === "string" ? sp.eventFilter : "all";
   const delimiterRaw = typeof sp.delimiter === "string" ? sp.delimiter : "comma";
+  const includeExtraBoothCommission = sp.extraBoothCommission === "1";
+  const includeExtraCashierPartners = sp.extraCashierPartners === "1";
+  const includeExtraFreelance = sp.extraFreelance === "1";
 
   const eventFilter: EventFilter =
     eventFilterRaw === "renewal" ||
@@ -220,10 +223,20 @@ export default async function SimulationPage({
         targetDate,
         primaryEmail: activeEmail,
         partnerEmail: selectedFriend.friend.email,
+        scenarioOptions: {
+          includeExtraBoothCommission,
+          includeExtraCashierPartners,
+          includeExtraFreelance,
+        },
       })
     : await simulateSingleUserGrowth({
         targetDate,
         email: activeEmail,
+        scenarioOptions: {
+          includeExtraBoothCommission,
+          includeExtraCashierPartners,
+          includeExtraFreelance,
+        },
       });
 
   const partnerParticipant = "partner" in simulation ? simulation.partner : null;
@@ -277,6 +290,9 @@ export default async function SimulationPage({
               displayName: friendship.friend.displayName,
             }))}
             financeProfile={workspace.financeProfile}
+            initialExtraBoothCommission={includeExtraBoothCommission}
+            initialExtraCashierPartners={includeExtraCashierPartners}
+            initialExtraFreelance={includeExtraFreelance}
           />
         </div>
 
