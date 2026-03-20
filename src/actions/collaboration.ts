@@ -47,6 +47,32 @@ function computeBoothRecurringPayoutDay(mouSignedAt: Date, packageType: BoothPac
   return nextDay > 31 ? 1 : nextDay;
 }
 
+const EXCLUSIVE_SPLIT_CAPITAL_THRESHOLD = 20_000_000;
+const EXCLUSIVE_SPLIT_INCOME_THRESHOLD = 2_000_000;
+
+function buildBoothUnitDrafts(input: {
+  boothName: string;
+  packageType: BoothPackageType;
+  totalCapital: number;
+  totalExpectedMonthlyIncome: number;
+}) {
+  const shouldSplitExclusiveIntoTwo =
+    input.packageType === BoothPackageType.EXCLUSIVE &&
+    input.totalCapital >= EXCLUSIVE_SPLIT_CAPITAL_THRESHOLD &&
+    input.totalExpectedMonthlyIncome >= EXCLUSIVE_SPLIT_INCOME_THRESHOLD;
+
+  const unitCount = shouldSplitExclusiveIntoTwo ? 2 : 1;
+
+  return Array.from({ length: unitCount }, (_, index) => {
+    const unitLabel = unitCount > 1 ? ` (Unit ${index + 1})` : "";
+    return {
+      boothName: `${input.boothName}${unitLabel}`,
+      expectedMonthlyIncome: input.totalExpectedMonthlyIncome / unitCount,
+      capitalAmount: input.totalCapital / unitCount,
+    };
+  });
+}
+
 function decodeBase64ToBytes(base64: string): Uint8Array {
   const source = Buffer.from(base64, "base64");
   const bytes: Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(source.length));
@@ -392,46 +418,76 @@ export async function decideBoothPurchaseStrategy(input: {
         ? (decodeBase64ToBytes(input.mouDocumentBase64) as Uint8Array<ArrayBuffer>)
         : null;
 
-      const createdBooth = await tx.booth.create({
-        data: {
-          name: input.boothName,
-          expectedMonthlyIncome: input.expectedMonthlyIncome,
-          boothUnitCount: isExclusive ? 2 : 1,
-          packageType,
-          mouSignedAt,
-          mouDocumentName: mouDocumentName || null,
-          mouDocumentMimeType: mouDocumentMimeType || null,
-          mouDocumentData,
-          contractDurationMonths: isExclusive ? 48 : 24,
-          exclusiveRenewalCapital: isExclusive ? 20_000_000 : 20_000_000,
-          referralEconomyBooths: input.referralEconomyBooths ?? 0,
-          isShared: false,
-        },
+      const boothDrafts = buildBoothUnitDrafts({
+        boothName: input.boothName,
+        packageType,
+        totalCapital: input.boothPrice,
+        totalExpectedMonthlyIncome: input.expectedMonthlyIncome,
       });
 
-      await tx.boothOwnership.create({
-        data: {
-          boothId: createdBooth.id,
+      const existingBoothNames = await tx.boothOwnership.findMany({
+        where: {
           userId: input.requesterId,
-          capitalAmount: input.boothPrice,
-          revenueSharePct: 100,
+          booth: {
+            name: {
+              in: boothDrafts.map((draft) => draft.boothName),
+            },
+          },
         },
+        include: { booth: true },
       });
 
-      await tx.incomeSource.create({
-        data: {
-          ownerUserId: input.requesterId,
-          name: `${input.boothName} (Booth)`,
-          category: CategoryType.BOOTH,
-          amount: input.expectedMonthlyIncome,
-          isRecurring: true,
-          payoutDate,
-          expectedDate: null,
-          isActive: true,
-        },
-      });
+      if (existingBoothNames.length > 0) {
+        const duplicatedNames = existingBoothNames.map((item) => item.booth.name).join(", ");
+        throw new Error(`You already own booth with name: ${duplicatedNames}.`);
+      }
 
-      return createdBooth;
+      const createdBooths = [];
+
+      for (const draft of boothDrafts) {
+        const createdBooth = await tx.booth.create({
+          data: {
+            name: draft.boothName,
+            expectedMonthlyIncome: draft.expectedMonthlyIncome,
+            boothUnitCount: 1,
+            packageType,
+            mouSignedAt,
+            mouDocumentName: mouDocumentName || null,
+            mouDocumentMimeType: mouDocumentMimeType || null,
+            mouDocumentData,
+            contractDurationMonths: isExclusive ? 48 : 24,
+            exclusiveRenewalCapital: 20_000_000,
+            referralEconomyBooths: input.referralEconomyBooths ?? 0,
+            isShared: false,
+          },
+        });
+
+        await tx.boothOwnership.create({
+          data: {
+            boothId: createdBooth.id,
+            userId: input.requesterId,
+            capitalAmount: draft.capitalAmount,
+            revenueSharePct: 100,
+          },
+        });
+
+        await tx.incomeSource.create({
+          data: {
+            ownerUserId: input.requesterId,
+            name: `${draft.boothName} (Booth)`,
+            category: CategoryType.BOOTH,
+            amount: draft.expectedMonthlyIncome,
+            isRecurring: true,
+            payoutDate,
+            expectedDate: null,
+            isActive: true,
+          },
+        });
+
+        createdBooths.push(createdBooth);
+      }
+
+      return createdBooths[0];
     });
 
     revalidatePath("/income");
@@ -527,36 +583,51 @@ export async function reviewJointBoothProposal(input: {
 
   const approvedProposal = await prisma.$transaction(async (tx) => {
     const isExclusive = proposal.packageType === BoothPackageType.EXCLUSIVE;
-    const booth = await tx.booth.create({
-      data: {
-        name: proposal.boothName,
-        expectedMonthlyIncome: proposal.expectedMonthlyIncome,
-        boothUnitCount: isExclusive ? 2 : 1,
-        packageType: proposal.packageType,
-        mouSignedAt: proposal.mouSignedAt,
-        contractDurationMonths: isExclusive ? 48 : 24,
-        exclusiveRenewalCapital: isExclusive ? 20_000_000 : 20_000_000,
-        referralEconomyBooths: proposal.referralEconomyBooths,
-        isShared: true,
-      },
+    const boothDrafts = buildBoothUnitDrafts({
+      boothName: proposal.boothName,
+      packageType: proposal.packageType,
+      totalCapital,
+      totalExpectedMonthlyIncome: proposal.expectedMonthlyIncome,
     });
 
-    await tx.boothOwnership.createMany({
-      data: [
-        {
-          boothId: booth.id,
-          userId: proposal.requesterId,
-          capitalAmount: proposal.requesterCapital,
-          revenueSharePct: requesterSharePct,
+    let firstCreatedBoothId: string | null = null;
+
+    for (const draft of boothDrafts) {
+      const booth = await tx.booth.create({
+        data: {
+          name: draft.boothName,
+          expectedMonthlyIncome: draft.expectedMonthlyIncome,
+          boothUnitCount: 1,
+          packageType: proposal.packageType,
+          mouSignedAt: proposal.mouSignedAt,
+          contractDurationMonths: isExclusive ? 48 : 24,
+          exclusiveRenewalCapital: 20_000_000,
+          referralEconomyBooths: proposal.referralEconomyBooths,
+          isShared: true,
         },
-        {
-          boothId: booth.id,
-          userId: proposal.partnerId,
-          capitalAmount: proposal.partnerCapital,
-          revenueSharePct: partnerSharePct,
-        },
-      ],
-    });
+      });
+
+      if (!firstCreatedBoothId) {
+        firstCreatedBoothId = booth.id;
+      }
+
+      await tx.boothOwnership.createMany({
+        data: [
+          {
+            boothId: booth.id,
+            userId: proposal.requesterId,
+            capitalAmount: proposal.requesterCapital / boothDrafts.length,
+            revenueSharePct: requesterSharePct,
+          },
+          {
+            boothId: booth.id,
+            userId: proposal.partnerId,
+            capitalAmount: proposal.partnerCapital / boothDrafts.length,
+            revenueSharePct: partnerSharePct,
+          },
+        ],
+      });
+    }
 
     await tx.incomeSource.createMany({
       data: [
@@ -589,7 +660,7 @@ export async function reviewJointBoothProposal(input: {
         status: ProposalStatus.APPROVED,
         reviewedAt: new Date(),
         reviewerNote: input.reviewerNote,
-        createdBoothId: booth.id,
+        createdBoothId: firstCreatedBoothId,
       },
       include: {
         createdBooth: true,

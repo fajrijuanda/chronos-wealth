@@ -71,6 +71,11 @@ function getBoothCommissionDay(mouSignedAt: Date, daysInMonth: number) {
   return clampDay(baseDay + 3, 1, daysInMonth);
 }
 
+function getExclusiveUnitsFromCapital(capitalAmount: number) {
+  const unit = Math.floor(capitalAmount / 10_000_000);
+  return Math.max(1, unit);
+}
+
 function getContractEventType(label: string): ContractEventType | null {
   if (/patungan|partner/i.test(label)) {
     return "partner_suggestion";
@@ -264,6 +269,8 @@ async function simulateUserBoothPlan(input: {
 
   let boothEquivalentOwned = existingEquivalent;
   let simulatedEquivalentAdded = 0;
+  let activeSimulatedBooths = 0;
+  let pendingSimulatedBooths = 0;
   const holdingFundAccumulated = 0;
   const pt2FundAccumulated = 0;
 
@@ -286,6 +293,7 @@ async function simulateUserBoothPlan(input: {
     monthKey: string;
     month: string;
     purchaseDay: number;
+    unitTotalOwned: number;
     cashBeforePurchase: number;
     monthlyIncome: number;
     monthlyExpense: number;
@@ -309,6 +317,11 @@ async function simulateUserBoothPlan(input: {
     const monthDate = addMonths(start, i);
     const monthEndDate = lastDayOfMonth(monthDate);
     const daysInMonth = getDate(monthEndDate);
+
+    if (pendingSimulatedBooths > 0) {
+      activeSimulatedBooths += pendingSimulatedBooths;
+      pendingSimulatedBooths = 0;
+    }
 
     const transactionExpense = expenseByMonth[monthKey(monthDate)] ?? 0;
     const monthlyExpense = monthlyBudgetCap > 0
@@ -383,6 +396,7 @@ async function simulateUserBoothPlan(input: {
 
     let monthlyBoothIncome = 0;
     let activeEquivalentFromOwned = 0;
+    let ownedUnitTotal = 0;
 
     for (const ownership of ownerships) {
       const booth = ownership.booth;
@@ -470,7 +484,11 @@ async function simulateUserBoothPlan(input: {
       // Booth income starts from the month after MoU (not in signing month).
       if (boothActiveInMonth && monthsSinceMou >= 1) {
         const extraUnits = exclusiveExtraUnitsByOwnershipId.get(ownership.id) ?? 0;
-        const effectiveUnits = booth.boothUnitCount + extraUnits;
+        const baseUnits =
+          booth.packageType === BoothPackageType.EXCLUSIVE && !booth.isShared
+            ? getExclusiveUnitsFromCapital(ownership.capitalAmount)
+            : booth.boothUnitCount;
+        const effectiveUnits = baseUnits + extraUnits;
         const incomeAmount =
           booth.expectedMonthlyIncome *
           effectiveUnits *
@@ -484,6 +502,7 @@ async function simulateUserBoothPlan(input: {
 
         activeEquivalentFromOwned += incomeAmount / revenuePerBooth;
         monthlyBoothIncome += incomeAmount;
+        ownedUnitTotal += effectiveUnits * (ownership.revenueSharePct / 100);
       }
 
       if (booth.packageType === BoothPackageType.ECONOMY) {
@@ -505,6 +524,18 @@ async function simulateUserBoothPlan(input: {
           monthlyCommissionIncome += commissionAmount;
         }
       }
+    }
+
+    if (activeSimulatedBooths > 0 && revenuePerBooth > 0) {
+      const simulatedIncome = activeSimulatedBooths * revenuePerBooth;
+      events.push({
+        day: purchaseDay,
+        amount: simulatedIncome,
+        label: `Simulated booth payout (${activeSimulatedBooths} unit)`,
+      });
+      monthlyBoothIncome += simulatedIncome;
+      activeEquivalentFromOwned += activeSimulatedBooths;
+      ownedUnitTotal += activeSimulatedBooths;
     }
 
     events.sort((a, b) => a.day - b.day);
@@ -566,7 +597,9 @@ async function simulateUserBoothPlan(input: {
     previousMonthEndCash = cash;
 
     simulatedEquivalentAdded += boothsAdded;
+    pendingSimulatedBooths += boothsAdded;
     boothEquivalentOwned = activeEquivalentFromOwned + simulatedEquivalentAdded;
+    const unitTotalOwned = ownedUnitTotal + simulatedEquivalentAdded;
 
     const totalPureIncome =
       monthlyBoothIncome + monthlyCommissionIncome + monthlyNonBoothIncome;
@@ -576,6 +609,7 @@ async function simulateUserBoothPlan(input: {
       monthKey: format(monthDate, "yyyy-MM"),
       month: format(monthDate, "MMM yyyy"),
       purchaseDay,
+      unitTotalOwned,
       cashBeforePurchase,
       monthlyIncome: totalPureIncome,
       monthlyExpense,
@@ -761,6 +795,8 @@ export async function simulateCollaborativeGrowth(input: {
         } else {
           partnerPlan.boothsAdded += 1;
         }
+        primaryPlan.unitTotalOwned += primaryShare;
+        partnerPlan.unitTotalOwned += partnerShare;
         primaryCashOffset -= primaryContribution;
         partnerCashOffset -= partnerContribution;
         primaryPlan.monthEndCash -= primaryContribution;

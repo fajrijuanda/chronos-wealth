@@ -26,6 +26,7 @@ type SimulationParticipant = {
   plans: Array<{
     month: string;
     purchaseDay: number;
+    unitTotalOwned: number;
     boothsAdded: number;
     monthlyIncome: number;
     monthlyExpense: number;
@@ -156,6 +157,14 @@ function sanitizeFilePart(value: string) {
     .replaceAll(/[^a-z0-9-]+/g, "-")
     .replaceAll(/-+/g, "-")
     .replaceAll(/^-|-$/g, "");
+}
+
+function formatUnitTotal(value: number) {
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  return value.toFixed(2);
 }
 
 function getCsvFileName(input: {
@@ -396,7 +405,7 @@ export default async function SimulationPage({
                     <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
                       <tr>
                         <th className="px-3 py-2">Month</th>
-                        <th className="px-3 py-2">Buy Day</th>
+                        <th className="px-3 py-2">Unit Total (Currently)</th>
                         <th className="px-3 py-2">Add Booth</th>
                         <th className="px-3 py-2">Booth Income</th>
                         <th className="px-3 py-2">Booth Commission</th>
@@ -418,7 +427,7 @@ export default async function SimulationPage({
                         return (
                           <tr key={`${user.userId}-${plan.month}`}>
                             <td className="px-3 py-2">{plan.month}</td>
-                            <td className="px-3 py-2">{plan.purchaseDay}</td>
+                            <td className="px-3 py-2">{formatUnitTotal(plan.unitTotalOwned)}</td>
                             <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
