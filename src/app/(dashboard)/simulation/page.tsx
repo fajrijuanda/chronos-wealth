@@ -41,10 +41,13 @@ type SimulationParticipant = {
     monthlyIncome: number;
     monthlyExpense: number;
     monthlyBoothIncome: number;
+    monthlyBoothIncomeOwn: number;
+    monthlyBoothIncomePatungan: number;
     monthlyCommissionIncome: number;
     monthlyNonBoothIncome: number;
     totalBoothsEquivalent: number;
     monthEndCash: number;
+    patunganTopUpApplied: number;
     contractEvents: Array<{
       day: number;
       amount: number;
@@ -496,9 +499,29 @@ export default async function SimulationPage({
                               </div>
                             </td>
                             <td className="px-3 py-2">{formatUnitTotal(plan.unitTotalOwned)}</td>
-                            <td className="px-3 py-2 text-slate-600 dark:text-slate-400">Rp {formatGroupedNumber(plan.cashBeforePurchase)}</td>
+                            <td className="px-3 py-2 text-slate-600 dark:text-slate-400">
+                              <div className="flex flex-col">
+                                <span>Rp {formatGroupedNumber(plan.cashBeforePurchase)}</span>
+                                {plan.patunganTopUpApplied > 0 ? (
+                                  <span className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-400">
+                                    + Rp {formatGroupedNumber(plan.patunganTopUpApplied)} patungan
+                                  </span>
+                                ) : null}
+                              </div>
+                            </td>
                             <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
-                            <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-col gap-0.5">
+                                <span>Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                  Sendiri: {plan.monthlyBoothIncome > 0 ? ((plan.monthlyBoothIncomeOwn / plan.monthlyBoothIncome) * 100).toFixed(1) : "0.0"}%
+                                  {" "}| Patungan: {plan.monthlyBoothIncome > 0 ? ((plan.monthlyBoothIncomePatungan / plan.monthlyBoothIncome) * 100).toFixed(1) : "0.0"}%
+                                </span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                  Rp {formatGroupedNumber(plan.monthlyBoothIncomeOwn)} | Rp {formatGroupedNumber(plan.monthlyBoothIncomePatungan)}
+                                </span>
+                              </div>
+                            </td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyNonBoothIncome)}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyIncome)}</td>

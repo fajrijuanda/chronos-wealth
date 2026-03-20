@@ -357,18 +357,22 @@ async function simulateUserBoothPlan(input: {
     monthlyPt2Saved: number;
     reserveGuard: number;
     monthlyBoothIncome: number;
+    monthlyBoothIncomeOwn: number;
+    monthlyBoothIncomePatungan: number;
     monthlyCommissionIncome: number;
     monthlyNonBoothIncome: number;
     boothsAdded: number;
     totalBoothsEquivalent: number;
     boothsAvailableToBuy: number;
     monthEndCash: number;
+    patunganTopUpApplied: number;
     contractEvents: ContractEvent[];
   }> = [];
 
   const start = startOfMonth(input.startDate);
   const totalMonths = differenceInMonths(startOfMonth(input.targetDate), start);
   let previousMonthEndCash = cash;
+  let pendingPatunganTopUp = 0;
 
   for (let i = 0; i <= totalMonths; i++) {
     const monthDate = addMonths(start, i);
@@ -491,6 +495,8 @@ async function simulateUserBoothPlan(input: {
     }
 
     let monthlyBoothIncome = 0;
+    let monthlyBoothIncomeOwn = 0;
+    let monthlyBoothIncomePatungan = 0;
     let activeEquivalentFromOwned = 0;
     let ownedUnitTotal = 0;
 
@@ -612,6 +618,7 @@ async function simulateUserBoothPlan(input: {
 
         activeEquivalentFromOwned += incomeAmount / revenuePerBooth;
         monthlyBoothIncome += incomeAmount;
+        monthlyBoothIncomeOwn += incomeAmount;
         ownedUnitTotal += effectiveUnits * (ownership.revenueSharePct / 100);
       }
 
@@ -683,6 +690,7 @@ async function simulateUserBoothPlan(input: {
           label: `Sim Booth ${contract.id} payout`,
         });
         monthlyBoothIncome += contract.monthlyRevenue;
+        monthlyBoothIncomeOwn += contract.monthlyRevenue;
         activeEquivalentFromOwned +=
           revenuePerBooth > 0 ? contract.monthlyRevenue / revenuePerBooth : 0;
       }
@@ -712,7 +720,9 @@ async function simulateUserBoothPlan(input: {
       .filter((event): event is ContractEvent => event !== null);
     const incomeAfterPurchase = totalMonthEventsIncome - incomeBeforePurchase;
 
-    const openingBalanceForMonth = previousMonthEndCash;
+    const patunganTopUpApplied = pendingPatunganTopUp;
+    const openingBalanceForMonth = previousMonthEndCash + patunganTopUpApplied;
+    pendingPatunganTopUp = 0;
     cash = openingBalanceForMonth + incomeBeforePurchase;
     const cashBeforePurchase = openingBalanceForMonth;
 
@@ -739,6 +749,7 @@ async function simulateUserBoothPlan(input: {
           label: `Saran patungan partner (setelah beli): kurang Rp ${formatGroupedNumber(shortage)} untuk 1 booth tambahan`,
           type: "partner_suggestion_with_purchase",
         });
+        pendingPatunganTopUp += shortage;
       } else if (boothsAdded === 0 && openingBalanceForMonth > 0 && openingBalanceForMonth < boothPrice) {
         const shortage = boothPrice - openingBalanceForMonth;
         contractEvents.push({
@@ -747,6 +758,7 @@ async function simulateUserBoothPlan(input: {
           label: `Saran patungan partner (belum beli): kurang Rp ${formatGroupedNumber(shortage)} untuk 1 booth`,
           type: "partner_suggestion_without_purchase",
         });
+        pendingPatunganTopUp += shortage;
       }
     }
 
@@ -794,12 +806,15 @@ async function simulateUserBoothPlan(input: {
       monthlyPt2Saved: actualPt2Saved,
       reserveGuard,
       monthlyBoothIncome,
+      monthlyBoothIncomeOwn,
+      monthlyBoothIncomePatungan,
       monthlyCommissionIncome,
       monthlyNonBoothIncome,
       boothsAdded,
       totalBoothsEquivalent: incomeEquivalent,
       boothsAvailableToBuy,
       monthEndCash: cashBeforeExpense,
+      patunganTopUpApplied,
       contractEvents,
     });
   }
@@ -916,6 +931,7 @@ export async function simulateCollaborativeGrowth(input: {
 
       if (primaryCollabIncome > 0) {
         primaryPlan.monthlyBoothIncome += primaryCollabIncome;
+        primaryPlan.monthlyBoothIncomePatungan += primaryCollabIncome;
         primaryPlan.monthlyIncome += primaryCollabIncome;
         primaryPlan.totalBoothsEquivalent =
           primary.revenuePerBooth > 0 ? primaryPlan.monthlyIncome / primary.revenuePerBooth : 0;
@@ -924,6 +940,7 @@ export async function simulateCollaborativeGrowth(input: {
 
       if (partnerCollabIncome > 0) {
         partnerPlan.monthlyBoothIncome += partnerCollabIncome;
+        partnerPlan.monthlyBoothIncomePatungan += partnerCollabIncome;
         partnerPlan.monthlyIncome += partnerCollabIncome;
         partnerPlan.totalBoothsEquivalent =
           partner.revenuePerBooth > 0 ? partnerPlan.monthlyIncome / partner.revenuePerBooth : 0;
