@@ -7,18 +7,19 @@ datasource db {
 }
 
 model IncomeSource {
-  id           String        @id @default(cuid())
-  name         String
-  category     CategoryType
-  amount       Float
-  isRecurring  Boolean       @default(true)
-  payoutDate   Int?
-  expectedDate DateTime?
-  contractEndDate DateTime?
-  isActive     Boolean       @default(true)
-  ownerUserId  String?
-  ownerUser    AppUser?      @relation("UserIncomeSources", fields: [ownerUserId], references: [id])
-  transactions Transaction[]
+  id                      String        @id @default(cuid())
+  name                    String
+  category                CategoryType
+  amount                  Float
+  isRecurring             Boolean       @default(true)
+  payoutDate              Int?
+  expectedDate            DateTime?
+  contractEndDate         DateTime?
+  contractDurationMonths  Int?          @default(12)
+  isActive                Boolean       @default(true)
+  ownerUserId             String?
+  ownerUser               AppUser?      @relation("UserIncomeSources", fields: [ownerUserId], references: [id])
+  transactions            Transaction[]
 }
 
 model AppUser {
@@ -243,6 +244,7 @@ enum CategoryType {
   PROJECT
   COMMISSION
   STOCK
+  BONUS
 }
 
 enum TxType {

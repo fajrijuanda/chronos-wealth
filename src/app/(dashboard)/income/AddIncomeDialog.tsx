@@ -31,6 +31,7 @@ const DEFAULT_OPTIONS: Array<{ value: CategoryType; label: string }> = [
   { value: "COMMISSION", label: "Commission" },
   { value: "STOCK", label: "Dividen / Saham" },
   { value: "SAAS", label: "SaaS Business" },
+  { value: "BONUS", label: "Bonus" },
   { value: "BOOTH", label: "Booth Business" },
 ];
 
@@ -49,6 +50,7 @@ export function AddIncomeDialog({
   const [scheduleMode, setScheduleMode] = useState<"RECURRING" | "ONE_TIME">("RECURRING");
   const [startDate, setStartDate] = useState<string>("");
   const [expectedDate, setExpectedDate] = useState<string>("");
+  const [contractDurationMonths, setContractDurationMonths] = useState<number | null>(12);
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -79,6 +81,7 @@ export function AddIncomeDialog({
     const expectedDateStr = expectedDate;
     const startDateStr = startDate;
     const parsedStartDate = parseDateInputToUtcNoon(startDateStr);
+    const contractDuration = formData.get("contractDurationMonths") ? Number(formData.get("contractDurationMonths")) : null;
     const effectiveIsRecurring = isBoothCategory || (scheduleMode === "RECURRING" && isRecurring);
     const effectivePayoutDate = effectiveIsRecurring ? payoutDate : null;
     const effectiveExpectedDate = effectiveIsRecurring
@@ -96,6 +99,7 @@ export function AddIncomeDialog({
               isRecurring: effectiveIsRecurring,
               payoutDate: effectiveIsRecurring ? effectivePayoutDate : null,
               expectedDate: effectiveExpectedDate,
+              contractDurationMonths: contractDuration,
             });
             showSuccess("Sumber pendapatan baru berhasil ditambahkan.");
             setIsOpen(false);
@@ -115,7 +119,7 @@ export function AddIncomeDialog({
           Add Income
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto z-50">
         <DialogHeader>
           <DialogTitle>Add New Income Source</DialogTitle>
           <DialogDescription>
@@ -189,6 +193,27 @@ export function AddIncomeDialog({
               </>
             )}
           </div>
+
+          {(isBoothCategory || scheduleMode === "RECURRING") && (
+            <div className="space-y-2">
+              <label htmlFor="income-contract-duration" className="text-sm font-medium">Kontrak Durasi</label>
+              <Select 
+                value={contractDurationMonths === null ? "forever" : String(contractDurationMonths)} 
+                onValueChange={(value) => setContractDurationMonths(value === "forever" ? null : Number(value))}
+              >
+                <SelectTrigger id="income-contract-duration" className="w-full">
+                  <SelectValue placeholder="Pilih durasi kontrak" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12">1 Tahun (12 bulan)</SelectItem>
+                  <SelectItem value="24">2 Tahun (24 bulan)</SelectItem>
+                  <SelectItem value="48">4 Tahun (48 bulan)</SelectItem>
+                  <SelectItem value="forever">Selamanya</SelectItem>
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="contractDurationMonths" value={contractDurationMonths === null ? "" : String(contractDurationMonths)} />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4">
             {isBoothCategory || scheduleMode === "RECURRING" ? (

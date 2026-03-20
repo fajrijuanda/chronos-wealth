@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CircleOff, Wallet, Briefcase, Code2, TrendingUp, Coins, Building2 } from "lucide-react";
+import { CheckCircle2, CircleOff, Wallet, Briefcase, Code2, TrendingUp, Coins, Building2, Gift } from "lucide-react";
 import { CategoryType } from "@prisma/client";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate, formatJakartaDateTime } from "@/lib/date-format";
@@ -61,6 +61,12 @@ function getCategoryBadge(category: CategoryType) {
       bgColor: "bg-green-100 dark:bg-green-900/35",
       textColor: "text-green-700 dark:text-green-300"
     },
+    BONUS: {
+      label: "Bonus",
+      icon: <Gift className="h-3.5 w-3.5" />,
+      bgColor: "bg-pink-100 dark:bg-pink-900/35",
+      textColor: "text-pink-700 dark:text-pink-300"
+    },
     BOOTH: {
       label: "Booth",
       icon: <Building2 className="h-3.5 w-3.5" />,
@@ -81,10 +87,14 @@ export function IncomeDataTables({
   incomes,
   salesHistory,
   showSalesHistory = true,
+  boothSalesUploadCard,
+  boothShareSummaryCard,
 }: {
   incomes: IncomeRow[];
   salesHistory: SalesRow[];
   showSalesHistory?: boolean;
+    boothSalesUploadCard?: React.ReactNode;
+    boothShareSummaryCard?: React.ReactNode;
 }) {
   const incomeColumns: Array<TableColumn<IncomeRow>> = [
     {
@@ -112,6 +122,7 @@ export function IncomeDataTables({
           COMMISSION: "Commission",
           STOCK: "Stock",
           SAAS: "SaaS",
+          BONUS: "Bonus",
           BOOTH: "Booth",
         };
         return categoryConfig[row.category];

@@ -76,18 +76,28 @@ export async function createIncomeSource(data: {
   isRecurring: boolean;
   payoutDate?: number | null;
   expectedDate?: Date | null;
+  contractDurationMonths?: number | null;
   ownerUserId?: string | null;
 }) {
   let contractEndDate: Date | null = null;
   
-  // For recurring COMMISSION category, set contract end date to 2 years (24 months) from expectedDate
-  if (data.isRecurring && data.category === CategoryType.COMMISSION && data.expectedDate) {
-    contractEndDate = addMonths(data.expectedDate, 24);
+  // Calculate contract end date based on contractDurationMonths if provided
+  if (data.isRecurring && data.expectedDate) {
+    const durationMonths = data.contractDurationMonths ?? (data.category === CategoryType.COMMISSION ? 24 : null);
+    if (durationMonths) {
+      contractEndDate = addMonths(data.expectedDate, durationMonths);
+    }
   }
   
   const result = await prisma.incomeSource.create({
     data: {
-      ...data,
+      name: data.name,
+      category: data.category,
+      amount: data.amount,
+      isRecurring: data.isRecurring,
+      payoutDate: data.payoutDate,
+      expectedDate: data.expectedDate,
+      contractDurationMonths: data.contractDurationMonths,
       contractEndDate,
     },
   });
@@ -103,6 +113,7 @@ export async function createIncomeSourceByEmail(data: {
   isRecurring: boolean;
   payoutDate?: number | null;
   expectedDate?: Date | null;
+  contractDurationMonths?: number | null;
 }) {
   const { sessionEmail, isSuperAdmin } = await getSessionActor();
   const normalizedOwnerEmail = data.ownerEmail.trim().toLowerCase();
@@ -119,6 +130,7 @@ export async function createIncomeSourceByEmail(data: {
     isRecurring: data.isRecurring,
     payoutDate: data.payoutDate,
     expectedDate: data.expectedDate,
+    contractDurationMonths: data.contractDurationMonths,
   });
 }
 
@@ -146,6 +158,7 @@ export async function updateIncomeSource(id: string, data: Partial<{
   isRecurring: boolean;
   payoutDate: number | null;
   expectedDate: Date | null;
+  contractDurationMonths: number | null;
   isActive: boolean;
 }>) {
   await assertIncomeSourceAccess(id);

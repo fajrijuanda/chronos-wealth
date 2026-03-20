@@ -785,9 +785,12 @@ async function simulateUserBoothPlan(input: {
     const cashBeforeExpense = cash;
 
     // Calculate available booths from end cash (before expense)
-    const boothsAvailableToBuy = boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
-    const remainderAfterAvailableBooths = cashBeforeExpense - (boothsAvailableToBuy * boothPrice);
+    // Only if we haven't reached the target booth equivalent yet
+    const hasReachedTarget = targetBoothEquivalent > 0 && ownedUnitTotal >= targetBoothEquivalent;
+    const boothsAvailableToBuy = !hasReachedTarget && boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
+    const remainderAfterAvailableBooths = !hasReachedTarget ? cashBeforeExpense - (boothsAvailableToBuy * boothPrice) : 0;
     const boothsAvailableWithPatungan =
+      !hasReachedTarget &&
       !isPatunganSuggestionDisabled &&
       remainderAfterAvailableBooths > 0 &&
       remainderAfterAvailableBooths < boothPrice
