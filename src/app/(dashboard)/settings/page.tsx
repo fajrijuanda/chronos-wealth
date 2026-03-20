@@ -15,6 +15,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectField } from "@/components/ui/select-field";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SlidersHorizontal, Flag, Users, Shield } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +33,10 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "connections", label: "Connections" },
   { id: "session", label: "Session" },
 ];
+
+function getTabLabel(tab: TabId) {
+  return tabs.find((item) => item.id === tab)?.label ?? "Finance";
+}
 
 export default async function SettingsPage({
   searchParams,
@@ -108,20 +118,25 @@ export default async function SettingsPage({
         </div>
       </div>
 
-      <div className="inline-flex flex-wrap rounded-2xl border border-white/65 dark:border-white/20 p-1 bg-white/72 dark:bg-slate-900/45 shadow-[0_14px_28px_-22px_rgba(93,101,183,0.95)] backdrop-blur-md gap-1">
-        {tabs.map((item) => (
-          <a
-            key={item.id}
-            href={`/settings?tab=${item.id}`}
-            className={`min-w-24 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-center ${
-              tab === item.id
-                ? "bg-linear-to-r from-primary to-[#8f95ea] text-white shadow-[0_12px_22px_-16px_rgba(102,109,192,0.95)]"
-                : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/8"
-            }`}
-          >
-            {item.label}
-          </a>
-        ))}
+      <div className="flex items-center gap-3">
+        <p className="text-sm font-medium text-muted-foreground">Section</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="min-w-44 justify-between rounded-2xl">
+              {getTabLabel(tab)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52 rounded-2xl">
+            {tabs.map((item) => (
+              <DropdownMenuItem key={item.id} asChild>
+                <Link href={`/settings?tab=${item.id}`} className="flex w-full items-center justify-between">
+                  <span>{item.label}</span>
+                  {tab === item.id ? <span className="text-xs text-primary">Active</span> : null}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {tab === "finance" ? (

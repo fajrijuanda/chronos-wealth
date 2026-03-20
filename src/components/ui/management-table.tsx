@@ -9,6 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type ExportFormat = "csv" | "excel" | "json" | "pdf";
 
@@ -246,20 +253,6 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/70 px-4 py-3 dark:border-slate-800 sm:px-5">
-        <select
-          value={pageSize}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            setPageSize(next);
-            setPage(1);
-          }}
-          className="h-8 rounded-lg border border-input bg-white px-2 text-xs dark:bg-slate-900"
-          title="Rows per page"
-        >
-          {pageSizeOptions.map((size) => (
-            <option key={size} value={size}>{size}</option>
-          ))}
-        </select>
 
         {filters && filters.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1">
@@ -316,6 +309,25 @@ export function ManagementTable<T extends { id: string }>(props: ManagementTable
               <DropdownMenuItem onClick={() => exportData("pdf")}>Export PDF</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => {
+              setPageSize(Number(value));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-8 w-18 rounded-lg px-2 text-xs" title="Rows per page">
+              <SelectValue placeholder="Rows" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

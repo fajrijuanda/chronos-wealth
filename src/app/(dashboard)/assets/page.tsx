@@ -4,7 +4,7 @@ import {
 import { getActiveUserEmail } from "@/lib/active-user";
 
 import { AddAssetButton } from "./AddAssetButton";
-import { AssetsPortfolioTable, mapAssetRows } from "./AssetsPortfolioTable";
+import { AssetsPortfolioTable } from "./AssetsPortfolioTable";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +19,6 @@ export default async function AssetsPage({
   );
 
   const workspace = await getCollaborationWorkspace(activeEmail);
-  const rows = mapAssetRows({
-    portfolio: workspace.portfolio,
-    nonBoothAssets: workspace.nonBoothAssets,
-  });
 
   return (
     <div className="space-y-8 pb-10">
@@ -39,7 +35,10 @@ export default async function AssetsPage({
         />
       </div>
 
-      <AssetsPortfolioTable rows={rows} />
+      <AssetsPortfolioTable
+        portfolio={workspace.portfolio}
+        nonBoothAssets={workspace.nonBoothAssets}
+      />
     </div>
   );
 }

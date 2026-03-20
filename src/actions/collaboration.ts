@@ -1049,6 +1049,7 @@ export async function getPublicProfileByEmail(input: {
     recentConnections: friendships.map((item) => ({
       id: item.id,
       status: item.status,
+      createdAt: item.createdAt,
       friend:
         item.requesterId === profileUser.id
           ? item.addressee

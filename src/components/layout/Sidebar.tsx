@@ -1,37 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  Box,
-  LayoutDashboard,
-  Wallet,
-  TrendingDown,
-  Target,
-  LineChart,
-  Handshake,
-  UserCircle2,
-  Settings,
+  ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-  Users,
-  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { logoutAction } from "@/actions/auth";
+import { getSidebarSections, type SidebarGroupItem, type SidebarLeaf } from "./sidebar-config";
+import { SidebarLogoutButton } from "./SidebarLogoutButton";
 
-const links = [
-  { name: "Overview", href: "/overview", icon: LayoutDashboard },
-  { name: "Assets", href: "/assets", icon: Box },
-  { name: "Income", href: "/income", icon: Wallet },
-  { name: "Expenses", href: "/expenses", icon: TrendingDown },
-  { name: "Targets", href: "/targets", icon: Target },
-  { name: "Collaboration", href: "/collaboration", icon: Handshake },
-  { name: "Profile", href: "/profile", icon: UserCircle2 },
-  { name: "Simulation", href: "/simulation", icon: LineChart },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
+function hrefToTab(href: string) {
+  const query = href.split("?")[1];
+  if (!query) return null;
+  return new URLSearchParams(query).get("tab");
+}
+
+function useIsHrefActive() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab");
+
+  return (href: string) => {
+    const [base] = href.split("?");
+    const isPathMatch = pathname === base || pathname.startsWith(`${base}/`);
+    if (!isPathMatch) return false;
+
+    const tab = hrefToTab(href);
+    if (!tab) return true;
+    return activeTab === tab;
+  };
+}
+
+function hasActiveChild(item: SidebarGroupItem, isActive: (href: string) => boolean) {
+  return Boolean(item.children?.some((child) => isActive(child.href)));
+}
+
+function isParentActive(item: SidebarGroupItem, isActive: (href: string) => boolean) {
+  return (item.href ? isActive(item.href) : false) || hasActiveChild(item, isActive);
+}
+
+function CollapsedTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute left-full top-1/2 z-40 ml-3 -translate-y-1/2 rounded-lg bg-slate-950 px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0.5 dark:bg-slate-100 dark:text-slate-900">
+      {label}
+    </span>
+  );
+}
 
 export function Sidebar({
   summary,
@@ -44,12 +63,24 @@ export function Sidebar({
     pendingIncomingCount: number;
   };
 }) {
-  const pathname = usePathname();
+  const isHrefActive = useIsHrefActive();
   const transitionTimer = useRef<number | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("chronos-sidebar-collapsed") === "1";
   });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
+    collaboration: true,
+    settings: true,
+  }));
+  const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
+
+  const sections = getSidebarSections(summary.pendingIncomingCount);
+
+  useEffect(() => {
+    if (collapsed) return;
+    setFlyoutGroup(null);
+  }, [collapsed]);
 
   useEffect(() => {
     document.documentElement.dataset.sidebarState = collapsed ? "collapsed" : "expanded";
@@ -76,11 +107,125 @@ export function Sidebar({
     }, 320);
   };
 
+  const toggleGroup = (key: string) => {
+    if (collapsed) {
+      setFlyoutGroup((prev) => (prev === key ? null : key));
+      return;
+    }
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const renderLeafItem = (child: SidebarLeaf) => {
+    const childActive = isHrefActive(child.href);
+    return (
+      <Link
+        key={child.href}
+        href={child.href}
+        className={cn(
+          "group flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors",
+          childActive
+            ? "bg-white/82 text-primary font-semibold ring-1 ring-white/70 dark:bg-white/10"
+            : "text-slate-600 hover:bg-white/75 dark:text-slate-300 dark:hover:bg-white/8",
+        )}
+      >
+        <span>{child.name}</span>
+        {typeof child.badge === "number" && child.badge > 0 ? (
+          <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+            {child.badge}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
+
+  const renderMenuItem = (item: SidebarGroupItem) => {
+    const Icon = item.icon;
+    const parentActive = isParentActive(item, isHrefActive);
+    const expanded = collapsed ? flyoutGroup === item.key : (openGroups[item.key] ?? parentActive);
+
+    if (!item.children?.length) {
+      return (
+        <div key={item.key} className="group relative">
+          <Link
+            href={item.href ?? "#"}
+            className={cn(
+              "flex items-center rounded-2xl transition-all duration-200",
+              collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
+              parentActive
+                ? "bg-white/80 text-primary font-semibold shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/70 dark:bg-white/10"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground",
+            )}
+          >
+            <Icon className="h-5 w-5 shrink-0" />
+            {!collapsed ? <span>{item.name}</span> : null}
+          </Link>
+          {collapsed ? <CollapsedTooltip label={item.name} /> : null}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={item.key}
+        className="relative space-y-1"
+        onMouseEnter={() => {
+          if (collapsed) setFlyoutGroup(item.key);
+        }}
+        onMouseLeave={() => {
+          if (collapsed) setFlyoutGroup((prev) => (prev === item.key ? null : prev));
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => toggleGroup(item.key)}
+          className={cn(
+            "w-full rounded-2xl transition-all duration-200",
+            collapsed ? "flex items-center justify-center px-2 py-3" : "flex items-center gap-3 px-3 py-2.5",
+            parentActive
+              ? "bg-white/80 text-primary font-semibold ring-1 ring-white/70 shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] dark:bg-white/10"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground",
+          )}
+        >
+          <Icon className="h-5 w-5 shrink-0" />
+          {!collapsed ? <span className="flex-1 text-left">{item.name}</span> : null}
+          {!collapsed ? (
+            <ChevronDown className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")} />
+          ) : null}
+        </button>
+        {collapsed ? <CollapsedTooltip label={item.name} /> : null}
+
+        {!collapsed ? (
+          <div
+            className={cn(
+              "space-y-1 overflow-hidden pl-5 transition-[max-height,opacity,transform] duration-250 ease-out",
+              expanded ? "max-h-80 translate-y-0 opacity-100" : "max-h-0 -translate-y-1 opacity-0",
+            )}
+          >
+            <div className="space-y-1 border-l border-slate-200/70 pl-3 dark:border-slate-700/70">
+              {item.children.map(renderLeafItem)}
+            </div>
+          </div>
+        ) : null}
+
+        {collapsed && expanded ? (
+          <div className="absolute left-full top-0 z-30 ml-3 w-56 rounded-2xl border border-white/60 bg-white/90 p-2 shadow-[0_22px_34px_-24px_rgba(62,69,143,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95">
+            <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {item.name}
+            </p>
+            <div className="space-y-1">{item.children.map(renderLeafItem)}</div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
-    <aside className={cn(
-      "h-screen max-w-xs flex-col hidden md:flex backdrop-blur-xl bg-sidebar/70 border-r border-sidebar-border/85 shadow-[14px_0_40px_-30px_rgba(93,102,186,0.65)] isolate transition-all duration-300",
-      collapsed ? "w-20" : "w-64",
-    )}>
+    <aside
+      className={cn(
+        "h-screen max-w-xs flex-col hidden md:flex backdrop-blur-xl bg-sidebar/70 border-r border-sidebar-border/85 shadow-[14px_0_40px_-30px_rgba(93,102,186,0.65)] isolate transition-all duration-300",
+        collapsed ? "w-20" : "w-64",
+      )}
+    >
       <div className={cn("flex h-16 items-center border-b border-sidebar-border/70", collapsed ? "px-3 justify-center" : "px-4 justify-between")}>
         <span className={cn(
           "font-bold tracking-tight bg-linear-to-br from-[#7981e0] to-[#9ca1f2] bg-clip-text text-transparent transition-all",
@@ -101,14 +246,7 @@ export function Sidebar({
       </div>
 
       <div className={cn("border-b border-sidebar-border/70", collapsed ? "px-2 py-3" : "px-4 py-4")}>
-        <Link
-          href="/profile"
-          className={cn(
-            "flex items-center rounded-2xl border border-white/60 bg-white/55 shadow-[0_10px_20px_-16px_rgba(93,102,186,0.95)] backdrop-blur-md transition-all hover:bg-white/75 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10",
-            collapsed ? "justify-center p-2" : "gap-3 p-3",
-          )}
-          title={collapsed ? summary.displayName : undefined}
-        >
+        <Link href="/profile" className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")} title={collapsed ? summary.displayName : undefined}>
           {summary.profilePhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -124,53 +262,39 @@ export function Sidebar({
 
           {!collapsed ? (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-100">{summary.displayName}</p>
+              <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-100">
+                {summary.displayName}
+              </p>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">{summary.email}</p>
             </div>
           ) : null}
         </Link>
-
-        {!collapsed ? (
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-xl border border-white/60 bg-white/55 px-2 py-2 text-slate-600 shadow-[0_8px_20px_-18px_rgba(93,102,186,0.95)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              <p className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wider">
-                <Users className="h-3 w-3" /> Friends
-              </p>
-              <p className="text-sm font-semibold">{summary.friendsCount}</p>
-            </div>
-            <div className="rounded-xl border border-white/60 bg-white/55 px-2 py-2 text-slate-600 shadow-[0_8px_20px_-18px_rgba(93,102,186,0.95)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              <p className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wider">
-                <Mail className="h-3 w-3" /> Pending
-              </p>
-              <p className="text-sm font-semibold">{summary.pendingIncomingCount}</p>
-            </div>
-          </div>
-        ) : null}
       </div>
 
-      <div className={cn("flex-1 py-6 space-y-2", collapsed ? "px-2" : "px-4")}>
-        {links.map((link) => {
-          const Icon = link.icon;
-          const isActive = pathname.startsWith(link.href);
+      <div className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-2" : "px-3")}>
+        <div className="space-y-5">
+          {sections.map((section) => (
+            <div key={section.label} className="space-y-2">
+              {!collapsed ? (
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  {section.label}
+                </p>
+              ) : null}
+              <div className="space-y-1.5">{section.items.map(renderMenuItem)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          return (
-            <Link
-              key={link.name}
-              href={link.href}
-              title={collapsed ? link.name : undefined}
-              className={cn(
-                "flex items-center rounded-2xl transition-all duration-300",
-                collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
-                isActive
-                  ? "bg-white/75 text-primary font-semibold shadow-[0_12px_24px_-18px_rgba(101,109,193,0.9)] ring-1 ring-white/60 dark:bg-white/10"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/85 hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <Icon className="w-5 h-5 shrink-0" />
-              {!collapsed ? link.name : null}
-            </Link>
-          );
-        })}
+      <div className={cn("border-t border-sidebar-border/70", collapsed ? "p-2" : "p-3")}>
+        {!collapsed ? (
+          <p className="mb-2 truncate px-1 text-[11px] text-slate-500 dark:text-slate-400">{summary.email}</p>
+        ) : null}
+        <SidebarLogoutButton
+          action={logoutAction}
+          compact={collapsed}
+          className={cn(collapsed ? "mx-auto" : "w-full")}
+        />
       </div>
     </aside>
   );

@@ -87,7 +87,7 @@ export default async function CollaborationPage({
         </div>
         <div className="flex flex-wrap gap-3">
           <Button asChild variant="outline" className="rounded-2xl">
-            <Link href="/settings?tab=connections" className="flex items-center gap-2">
+            <Link href="/profile?tab=connections" className="flex items-center gap-2">
               <UserRoundPlus className="w-4 h-4" />
               Manage Connections
             </Link>
@@ -106,7 +106,7 @@ export default async function CollaborationPage({
 
       {acceptedPartners.length === 0 ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
-          Belum ada partner accepted. Buka tab Connections di halaman Settings untuk kirim dan menerima koneksi dulu.
+          Belum ada partner accepted. Buka tab Connections di halaman Profile untuk kirim dan menerima koneksi dulu.
         </div>
       ) : null}
 

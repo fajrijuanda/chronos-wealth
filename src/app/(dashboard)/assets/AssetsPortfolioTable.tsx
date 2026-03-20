@@ -57,10 +57,32 @@ function getTypeMeta(type: AssetRow["assetType"]) {
 }
 
 export function AssetsPortfolioTable({
-  rows,
+  portfolio,
+  nonBoothAssets,
 }: {
-  rows: AssetRow[];
+  portfolio: Array<{
+    ownershipId: string;
+    boothId: string;
+    boothName: string;
+    packageType: BoothPackageType;
+    expectedMonthlyIncome: number;
+    revenueSharePct: number;
+    capitalAmount: number;
+    isShared: boolean;
+  }>;
+  nonBoothAssets: Array<{
+    id: string;
+    type: "GOLD" | "PROPERTY" | "OTHER";
+    name: string;
+    estimatedValue: number;
+    quantity: number | null;
+    unit: string | null;
+    notes: string | null;
+    acquiredAt: Date | null;
+  }>;
 }) {
+  const rows = mapAssetRows({ portfolio, nonBoothAssets });
+
   const columns: Array<TableColumn<AssetRow>> = [
     {
       key: "name",
@@ -167,7 +189,7 @@ export function AssetsPortfolioTable({
   );
 }
 
-export function mapAssetRows(input: {
+function mapAssetRows(input: {
   portfolio: Array<{
     ownershipId: string;
     boothId: string;
