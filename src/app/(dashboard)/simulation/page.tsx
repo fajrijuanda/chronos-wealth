@@ -527,13 +527,25 @@ export default async function SimulationPage({
                             <td className="px-3 py-2">
                               <div className="flex flex-col gap-0.5">
                                 <span>Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</span>
+                                {(() => {
+                                  const incomeReference =
+                                    plan.monthlyBoothIncomeOwn + plan.monthlyBoothIncomePatungan;
+                                  const ownSharePct =
+                                    incomeReference > 0
+                                      ? (plan.monthlyBoothIncomeOwn / incomeReference) * 100
+                                      : 0;
+                                  const patunganSharePct =
+                                    incomeReference > 0
+                                      ? (plan.monthlyBoothIncomePatungan / incomeReference) * 100
+                                      : 0;
+
+                                  return (
                                 <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                                  Sendiri: {plan.monthlyBoothIncome > 0 ? ((plan.monthlyBoothIncomeOwn / plan.monthlyBoothIncome) * 100).toFixed(1) : "0.0"}%
-                                  {" "}| Patungan: {plan.monthlyBoothIncome > 0 ? ((plan.monthlyBoothIncomePatungan / plan.monthlyBoothIncome) * 100).toFixed(1) : "0.0"}%
+                                  Sendiri: {ownSharePct.toFixed(1)}%
+                                  {" "}| Patungan: {patunganSharePct.toFixed(1)}%
                                 </span>
-                                <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                                  Rp {formatGroupedNumber(plan.monthlyBoothIncomeOwn)} | Rp {formatGroupedNumber(plan.monthlyBoothIncomePatungan)}
-                                </span>
+                                  );
+                                })()}
                               </div>
                             </td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
