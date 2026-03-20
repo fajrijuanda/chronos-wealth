@@ -752,30 +752,6 @@ async function simulateUserBoothPlan(input: {
         : maxBoothByCash;
     const capitalUsed = boothsAdded * boothPrice;
 
-    const cashRemainderFromPreviousMonth = Math.max(0, openingBalanceForMonth - capitalUsed);
-
-    if (boothPrice > 0) {
-      if (boothsAdded > 0 && cashRemainderFromPreviousMonth > 0 && cashRemainderFromPreviousMonth < boothPrice) {
-        const shortage = boothPrice - cashRemainderFromPreviousMonth;
-        contractEvents.push({
-          day: purchaseDay,
-          amount: shortage,
-          label: `Saran patungan partner (setelah beli): kurang Rp ${formatGroupedNumber(shortage)} untuk 1 booth tambahan`,
-          type: "partner_suggestion_with_purchase",
-        });
-        pendingPatunganTopUp += shortage;
-      } else if (boothsAdded === 0 && openingBalanceForMonth < boothPrice) {
-        const shortage = boothPrice - openingBalanceForMonth;
-        contractEvents.push({
-          day: purchaseDay,
-          amount: shortage,
-          label: `Saran patungan partner (belum beli): kurang Rp ${formatGroupedNumber(shortage)} untuk 1 booth`,
-          type: "partner_suggestion_without_purchase",
-        });
-        pendingPatunganTopUp += shortage;
-      }
-    }
-
     cash -= capitalUsed;
 
     const actualHoldingSaved = 0;
@@ -789,6 +765,19 @@ async function simulateUserBoothPlan(input: {
     const remainderAfterAvailableBooths = cashBeforeExpense - (boothsAvailableToBuy * boothPrice);
     const boothsAvailableWithPatungan = remainderAfterAvailableBooths > 0 && remainderAfterAvailableBooths < boothPrice ? 1 : 0;
     const boothPatunganShortage = boothsAvailableWithPatungan > 0 ? boothPrice - remainderAfterAvailableBooths : 0;
+
+    if (boothPatunganShortage > 0) {
+      contractEvents.push({
+        day: purchaseDay,
+        amount: boothPatunganShortage,
+        label:
+          boothsAdded > 0
+            ? `Saran patungan partner (setelah beli): kurang Rp ${formatGroupedNumber(boothPatunganShortage)} untuk 1 booth tambahan`
+            : `Saran patungan partner (belum beli): kurang Rp ${formatGroupedNumber(boothPatunganShortage)} untuk 1 booth`,
+        type: boothsAdded > 0 ? "partner_suggestion_with_purchase" : "partner_suggestion_without_purchase",
+      });
+      pendingPatunganTopUp += boothPatunganShortage;
+    }
 
     cash -= monthlyExpense;
     previousMonthEndCash = cashBeforeExpense;
