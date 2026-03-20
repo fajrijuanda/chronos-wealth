@@ -785,18 +785,36 @@ async function simulateUserBoothPlan(input: {
     const cashBeforeExpense = cash;
 
     // Calculate available booths from end cash (before expense)
-    // Only if we haven't reached the target booth equivalent yet
-    const hasReachedTarget = targetBoothEquivalent > 0 && ownedUnitTotal >= targetBoothEquivalent;
-    const boothsAvailableToBuy = !hasReachedTarget && boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
-    const remainderAfterAvailableBooths = !hasReachedTarget ? cashBeforeExpense - (boothsAvailableToBuy * boothPrice) : 0;
+    // and cap by remaining target if a target exists.
+    const hasReachedTarget =
+      targetBoothEquivalent > 0 && ownedUnitTotal >= targetBoothEquivalent;
+    const remainingBoothNeedToTarget =
+      targetBoothEquivalent > 0
+        ? Math.max(0, Math.ceil(targetBoothEquivalent - ownedUnitTotal))
+        : Number.POSITIVE_INFINITY;
+    const boothsAvailableRaw =
+      !hasReachedTarget && boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
+    const boothsAvailableToBuy =
+      targetBoothEquivalent > 0
+        ? Math.min(boothsAvailableRaw, remainingBoothNeedToTarget)
+        : boothsAvailableRaw;
+    const canReachTargetWithCurrentCash =
+      targetBoothEquivalent > 0 && boothsAvailableRaw >= remainingBoothNeedToTarget;
+    const shouldSuppressPatunganForTarget =
+      hasReachedTarget || canReachTargetWithCurrentCash;
+    const remainderAfterAvailableBooths =
+      !shouldSuppressPatunganForTarget
+        ? cashBeforeExpense - boothsAvailableRaw * boothPrice
+        : 0;
     const boothsAvailableWithPatungan =
-      !hasReachedTarget &&
+      !shouldSuppressPatunganForTarget &&
       !isPatunganSuggestionDisabled &&
       remainderAfterAvailableBooths > 0 &&
       remainderAfterAvailableBooths < boothPrice
         ? 1
         : 0;
-    const boothPatunganShortage = boothsAvailableWithPatungan > 0 ? boothPrice - remainderAfterAvailableBooths : 0;
+    const boothPatunganShortage =
+      boothsAvailableWithPatungan > 0 ? boothPrice - remainderAfterAvailableBooths : 0;
 
     if (boothPatunganShortage > 0) {
       contractEvents.push({
