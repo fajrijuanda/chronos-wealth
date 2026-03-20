@@ -58,6 +58,7 @@ export function SimulationControlPanel(props: {
   initialExtraBoothCommission: boolean;
   initialExtraCashierPartners: boolean;
   initialExtraFreelance: boolean;
+  initialDisabledPatunganMonths: string[];
 }) {
   const router = useRouter();
 
@@ -77,6 +78,7 @@ export function SimulationControlPanel(props: {
   const [includeExtraFreelance, setIncludeExtraFreelance] = useState(
     props.initialExtraFreelance,
   );
+  const [disabledPatunganMonths] = useState<string[]>(props.initialDisabledPatunganMonths);
   const [openingBalance, setOpeningBalance] = useState(
     props.financeProfile?.openingBalance?.toString() || "0",
   );
@@ -108,6 +110,10 @@ export function SimulationControlPanel(props: {
 
     if (includeExtraFreelance) {
       params.set("extraFreelance", "1");
+    }
+
+    if (disabledPatunganMonths.length > 0) {
+      params.set("disabledPatunganMonths", disabledPatunganMonths.join(","));
     }
 
     router.push(`/simulation?${params.toString()}`);

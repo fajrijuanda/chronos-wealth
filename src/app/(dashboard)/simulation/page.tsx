@@ -2,6 +2,7 @@ import { simulateCollaborativeGrowth, simulateSingleUserGrowth } from "@/actions
 import { getCollaborationWorkspace } from "@/actions/collaboration";
 import { CalendarDays } from "lucide-react";
 import { CsvActions } from "@/components/simulation/CsvActions";
+import { PatunganEventBadgeToggle } from "@/components/simulation/PatunganEventBadgeToggle";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate } from "@/lib/date-format";
 import { getActiveUserEmail } from "@/lib/active-user";
@@ -32,6 +33,7 @@ type SimulationParticipant = {
   projectedMonthlyIncome: number;
   targetBoothEquivalent: number;
   plans: Array<{
+    monthKey: string;
     month: string;
     purchaseDay: number;
     unitTotalOwned: number;
@@ -224,6 +226,12 @@ export default async function SimulationPage({
   const includeExtraBoothCommission = sp.extraBoothCommission === "1";
   const includeExtraCashierPartners = sp.extraCashierPartners === "1";
   const includeExtraFreelance = sp.extraFreelance === "1";
+  const disabledPatunganMonthsRaw =
+    typeof sp.disabledPatunganMonths === "string" ? sp.disabledPatunganMonths : "";
+  const disabledPatunganMonths = disabledPatunganMonthsRaw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => /^\d{4}-\d{2}$/.test(value));
 
   const eventFilter: EventFilter =
     eventFilterRaw === "renewal" ||
@@ -256,6 +264,7 @@ export default async function SimulationPage({
           includeExtraCashierPartners,
           includeExtraFreelance,
         },
+        disabledPatunganMonthKeys: disabledPatunganMonths,
       })
     : await simulateSingleUserGrowth({
         targetDate,
@@ -267,6 +276,7 @@ export default async function SimulationPage({
           includeExtraCashierPartners,
           includeExtraFreelance,
         },
+        disabledPatunganMonthKeys: disabledPatunganMonths,
       });
 
   const partnerParticipant = "partner" in simulation ? simulation.partner : null;
@@ -324,6 +334,7 @@ export default async function SimulationPage({
             initialExtraBoothCommission={includeExtraBoothCommission}
             initialExtraCashierPartners={includeExtraCashierPartners}
             initialExtraFreelance={includeExtraFreelance}
+            initialDisabledPatunganMonths={disabledPatunganMonths}
           />
         </div>
 
@@ -480,6 +491,7 @@ export default async function SimulationPage({
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {user.plans.map((plan, index) => {
                         const isTargetReachedRow = index === targetReachedIndex;
+                        const isPatunganSuggestionDisabled = disabledPatunganMonths.includes(plan.monthKey);
                         const filteredEvents =
                           eventFilter === "all"
                             ? plan.contractEvents
@@ -531,15 +543,37 @@ export default async function SimulationPage({
                             <td className="px-3 py-2 text-xs">
                               {filteredEvents.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
-                                  {filteredEvents.map((event, index) => (
-                                    <span
-                                      key={`${user.userId}-${plan.month}-${event.type}-${index}`}
-                                      className={`inline-flex items-center rounded-md border px-2 py-1 ${getEventBadgeClass(event.type)}`}
-                                      title={formatContractEvent(event)}
-                                    >
-                                      {getEventTypeLabel(event.type)} {(event.type === "partner_suggestion_with_purchase" || event.type === "partner_suggestion_without_purchase") && event.amount > 0 ? `(Rp ${formatGroupedNumber(event.amount)})` : ""} H{event.day}
-                                    </span>
-                                  ))}
+                                  {filteredEvents.map((event, index) => {
+                                    const eventLabel = getEventTypeLabel(event.type);
+                                    const eventClassName = `inline-flex items-center rounded-md border px-2 py-1 ${getEventBadgeClass(event.type)}`;
+                                    const isPatunganEvent =
+                                      event.type === "partner_suggestion_with_purchase" ||
+                                      event.type === "partner_suggestion_without_purchase";
+
+                                    if (isPatunganEvent) {
+                                      return (
+                                        <PatunganEventBadgeToggle
+                                          key={`${user.userId}-${plan.month}-${event.type}-${index}`}
+                                          monthKey={plan.monthKey}
+                                          eventLabel={eventLabel}
+                                          eventAmount={event.amount}
+                                          eventDay={event.day}
+                                          className={eventClassName}
+                                          isDisabled={isPatunganSuggestionDisabled}
+                                        />
+                                      );
+                                    }
+
+                                    return (
+                                      <span
+                                        key={`${user.userId}-${plan.month}-${event.type}-${index}`}
+                                        className={eventClassName}
+                                        title={formatContractEvent(event)}
+                                      >
+                                        {eventLabel} {event.amount > 0 ? `(Rp ${formatGroupedNumber(event.amount)})` : ""} H{event.day}
+                                      </span>
+                                    );
+                                  })}
                                 </div>
                               ) : (
                                 <span className="text-slate-500 dark:text-slate-400">-</span>

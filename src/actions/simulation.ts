@@ -234,6 +234,7 @@ async function simulateUserBoothPlan(input: {
   startDate: Date;
   simUser: SimUserInput;
   scenarioOptions: SimulationScenarioOptions;
+  disabledPatunganMonthKeys?: string[];
 }) {
   const user = await ensureAppUserByEmail({
     email: input.simUser.email,
@@ -379,9 +380,12 @@ async function simulateUserBoothPlan(input: {
   const totalMonths = differenceInMonths(startOfMonth(input.targetDate), start);
   let previousMonthEndCash = cash;
   let pendingPatunganTopUp = 0;
+  const disabledPatunganMonthKeys = new Set(input.disabledPatunganMonthKeys ?? []);
 
   for (let i = 0; i <= totalMonths; i++) {
     const monthDate = addMonths(start, i);
+    const currentMonthKey = format(monthDate, "yyyy-MM");
+    const isPatunganSuggestionDisabled = disabledPatunganMonthKeys.has(currentMonthKey);
     const monthEndDate = lastDayOfMonth(monthDate);
     const daysInMonth = getDate(monthEndDate);
 
@@ -775,7 +779,12 @@ async function simulateUserBoothPlan(input: {
     // Calculate available booths from end cash (before expense)
     const boothsAvailableToBuy = boothPrice > 0 ? Math.floor(cashBeforeExpense / boothPrice) : 0;
     const remainderAfterAvailableBooths = cashBeforeExpense - (boothsAvailableToBuy * boothPrice);
-    const boothsAvailableWithPatungan = remainderAfterAvailableBooths > 0 && remainderAfterAvailableBooths < boothPrice ? 1 : 0;
+    const boothsAvailableWithPatungan =
+      !isPatunganSuggestionDisabled &&
+      remainderAfterAvailableBooths > 0 &&
+      remainderAfterAvailableBooths < boothPrice
+        ? 1
+        : 0;
     const boothPatunganShortage = boothsAvailableWithPatungan > 0 ? boothPrice - remainderAfterAvailableBooths : 0;
 
     if (boothPatunganShortage > 0) {
@@ -892,7 +901,9 @@ export async function simulateCollaborativeGrowth(input: {
   partnerEmail: string;
   openingBalance?: number;
   scenarioOptions?: SimulationScenarioOptions;
+  disabledPatunganMonthKeys?: string[];
 }) {
+  const disabledPatunganMonthKeys = new Set(input.disabledPatunganMonthKeys ?? []);
   const scenarioOptions: SimulationScenarioOptions = {
     includeExtraBoothCommission: input.scenarioOptions?.includeExtraBoothCommission ?? false,
     includeExtraCashierPartners: input.scenarioOptions?.includeExtraCashierPartners ?? false,
@@ -913,6 +924,7 @@ export async function simulateCollaborativeGrowth(input: {
         revenuePerBooth: 1_000_000,
       },
       scenarioOptions,
+      disabledPatunganMonthKeys: input.disabledPatunganMonthKeys,
     }),
     simulateUserBoothPlan({
       targetDate: input.targetDate,
@@ -927,6 +939,7 @@ export async function simulateCollaborativeGrowth(input: {
         revenuePerBooth: 1_000_000,
       },
       scenarioOptions,
+      disabledPatunganMonthKeys: input.disabledPatunganMonthKeys,
     }),
   ]);
 
@@ -947,6 +960,7 @@ export async function simulateCollaborativeGrowth(input: {
   for (let monthIndex = 0; monthIndex < monthCount; monthIndex++) {
     const primaryPlan = primary.plans[monthIndex];
     const partnerPlan = partner.plans[monthIndex];
+    const isPatunganSuggestionDisabled = disabledPatunganMonthKeys.has(primaryPlan.monthKey);
 
     if (primaryCashOffset !== 0) {
       primaryPlan.cashBeforePurchase += primaryCashOffset;
@@ -986,7 +1000,7 @@ export async function simulateCollaborativeGrowth(input: {
       }
     }
 
-    if (monthIndex > 0) {
+    if (monthIndex > 0 && !isPatunganSuggestionDisabled) {
       const primaryPrevCash = primary.plans[monthIndex - 1].monthEndCash;
       const partnerPrevCash = partner.plans[monthIndex - 1].monthEndCash;
       const requiredCapital = collabBoothPrice;
@@ -1092,6 +1106,7 @@ export async function simulateSingleUserGrowth(input: {
   email: string;
   openingBalance?: number;
   scenarioOptions?: SimulationScenarioOptions;
+  disabledPatunganMonthKeys?: string[];
 }) {
   const scenarioOptions: SimulationScenarioOptions = {
     includeExtraBoothCommission: input.scenarioOptions?.includeExtraBoothCommission ?? false,
@@ -1112,6 +1127,7 @@ export async function simulateSingleUserGrowth(input: {
       revenuePerBooth: 1_000_000,
     },
     scenarioOptions,
+    disabledPatunganMonthKeys: input.disabledPatunganMonthKeys,
   });
 
   return {
