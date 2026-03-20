@@ -27,6 +27,26 @@ import {
 import { AssetType, BoothPackageType, BoothSelectionType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
+function parseDateInputToUtcNoon(dateInput: string): Date | null {
+  const trimmed = dateInput.trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0));
+}
+
+function getDateInputDay(dateInput: string): number {
+  const parsed = parseDateInputToUtcNoon(dateInput);
+  return parsed ? parsed.getUTCDate() : 1;
+}
+
 export function AddAssetButton({ email, basePrice }: { email: string, basePrice: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const [assetTypeValue, setAssetTypeValue] = useState<"BOOTH" | AssetType>("BOOTH");
@@ -51,8 +71,7 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
   }, [assetTypeValue]);
 
   const payoutDatePreview = useMemo(() => {
-    const parsed = new Date(`${mouDateValue}T00:00:00`);
-    const mouDay = Number.isNaN(parsed.getTime()) ? 1 : parsed.getDate();
+    const mouDay = getDateInputDay(mouDateValue);
     if (packageTypeValue === "EXCLUSIVE") {
       return mouDay;
     }
@@ -84,7 +103,7 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
     const income = Number(formData.get("income") ?? 0);
     const packageType = formData.get("packageType") === "EXCLUSIVE" ? BoothPackageType.EXCLUSIVE : BoothPackageType.ECONOMY;
     const mouSignedAtRaw = String(formData.get("mouSignedAt") ?? "").trim();
-    const mouSignedAt = mouSignedAtRaw ? new Date(`${mouSignedAtRaw}T00:00:00`) : new Date();
+    const mouSignedAt = parseDateInputToUtcNoon(mouSignedAtRaw) ?? new Date();
     const mouFile = formData.get("mouFile");
 
     let mouDocumentName: string | undefined;
@@ -112,7 +131,7 @@ export function AddAssetButton({ email, basePrice }: { email: string, basePrice:
     const quantity = quantityRaw ? Number(quantityRaw) : null;
     const notes = String(formData.get("notes") ?? "").trim();
     const acquiredAtRaw = String(formData.get("acquiredAt") ?? "").trim();
-    const acquiredAt = acquiredAtRaw ? new Date(`${acquiredAtRaw}T00:00:00`) : null;
+    const acquiredAt = parseDateInputToUtcNoon(acquiredAtRaw);
 
     startTransition(async () => {
         showLoading("Menambahkan asset ke portofolio...");

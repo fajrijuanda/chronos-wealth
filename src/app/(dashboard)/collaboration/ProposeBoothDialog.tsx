@@ -24,6 +24,21 @@ import { createJointBoothProposalByEmail } from "@/actions/collaboration";
 import { useRouter } from "next/navigation";
 import { BoothPackageType, BoothSelectionType } from "@prisma/client";
 
+function parseDateInputToUtcNoon(dateInput: string): Date | undefined {
+    const trimmed = dateInput.trim();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (!match) return undefined;
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || !Number.isInteger(day)) {
+        return undefined;
+    }
+
+    return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0));
+}
+
 export function ProposeBoothDialog({ 
     email, 
     basePrice, 
@@ -70,7 +85,7 @@ export function ProposeBoothDialog({
                 partnerBoothPrice,
                 expectedMonthlyIncome,
                 packageType,
-                mouSignedAt: mouSignedAtRaw ? new Date(mouSignedAtRaw) : undefined,
+                mouSignedAt: parseDateInputToUtcNoon(mouSignedAtRaw),
                 referralEconomyBooths,
                 selectedBoothType,
                 notes: notes || undefined,
