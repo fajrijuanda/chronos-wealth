@@ -34,9 +34,9 @@ export function MobileNav({
   const currentTab = searchParams.get("tab");
   const sections = getSidebarSections(pendingIncomingCount);
 
-  const isHrefActive = (href: string) => {
+  const isHrefActive = (href: string, exact = false) => {
     const [base] = href.split("?");
-    const isPathMatch = pathname === base || pathname.startsWith(`${base}/`);
+    const isPathMatch = pathname === base || (!exact && pathname.startsWith(`${base}/`));
     if (!isPathMatch) return false;
 
     const tab = hrefToTab(href);
@@ -45,8 +45,8 @@ export function MobileNav({
   };
 
   const itemIsActive = (item: SidebarGroupItem) => {
-    const ownActive = item.href ? isHrefActive(item.href) : false;
-    const childActive = Boolean(item.children?.some((child) => isHrefActive(child.href)));
+    const ownActive = item.href ? isHrefActive(item.href, Boolean(item.children?.length)) : false;
+    const childActive = Boolean(item.children?.some((child) => isHrefActive(child.href, true)));
     return ownActive || childActive;
   };
 
@@ -149,7 +149,7 @@ export function MobileNav({
                             >
                               <div className="space-y-1 border-l border-slate-200/70 pl-3 dark:border-slate-700/70">
                                 {item.children.map((child, index) => {
-                                  const childActive = isHrefActive(child.href);
+                                  const childActive = isHrefActive(child.href, true);
                                   const staggerDelay = `${index * 50}ms`;
                                   return (
                                     <Link

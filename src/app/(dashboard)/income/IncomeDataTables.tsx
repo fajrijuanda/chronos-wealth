@@ -32,9 +32,11 @@ type SalesRow = {
 export function IncomeDataTables({
   incomes,
   salesHistory,
+  showSalesHistory = true,
 }: {
   incomes: IncomeRow[];
   salesHistory: SalesRow[];
+  showSalesHistory?: boolean;
 }) {
   const incomeColumns: Array<TableColumn<IncomeRow>> = [
     {
@@ -171,15 +173,17 @@ export function IncomeDataTables({
         emptyMessage="No income sources found."
       />
 
-      <ManagementTable
-        title="Booth Sales History"
-        subtitle="Riwayat upload penjualan booth."
-        rows={salesHistory}
-        columns={salesColumns}
-        searchableText={(row) => `${row.boothName} ${row.uploadedBy} ${row.month}/${row.year}`}
-        exportFileName="booth-sales-history"
-        emptyMessage="No sales uploads yet."
-      />
+      {showSalesHistory ? (
+        <ManagementTable
+          title="Booth Sales History"
+          subtitle="Riwayat upload penjualan booth."
+          rows={salesHistory}
+          columns={salesColumns}
+          searchableText={(row) => `${row.boothName} ${row.uploadedBy} ${row.month}/${row.year}`}
+          exportFileName="booth-sales-history"
+          emptyMessage="No sales uploads yet."
+        />
+      ) : null}
     </div>
   );
 }

@@ -24,9 +24,27 @@ import { createIncomeSourceByEmail } from "@/actions/income";
 import { CategoryType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
-export function AddIncomeDialog({ email }: { email: string }) {
+const DEFAULT_OPTIONS: Array<{ value: CategoryType; label: string }> = [
+  { value: "SALARY", label: "Salary" },
+  { value: "PROJECT", label: "Project / Freelance" },
+  { value: "COMMISSION", label: "Commission" },
+  { value: "STOCK", label: "Dividen / Saham" },
+  { value: "SAAS", label: "SaaS Business" },
+  { value: "BOOTH", label: "Booth Business" },
+];
+
+export function AddIncomeDialog({
+  email,
+  categoryOptions,
+}: {
+  email: string;
+  categoryOptions?: CategoryType[];
+}) {
+  const options = DEFAULT_OPTIONS.filter((opt) =>
+    categoryOptions ? categoryOptions.includes(opt.value) : true,
+  );
   const [isOpen, setIsOpen] = useState(false);
-  const [categoryValue, setCategoryValue] = useState<CategoryType>("SALARY");
+  const [categoryValue, setCategoryValue] = useState<CategoryType>(options[0]?.value ?? "SALARY");
   const { showLoading, showSuccess, showError } = useStatus();
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -107,9 +125,9 @@ export function AddIncomeDialog({ email }: { email: string }) {
                     <SelectValue placeholder="Pilih kategori" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SALARY">Salary</SelectItem>
-                    <SelectItem value="PROJECT">Project / Freelance</SelectItem>
-                    <SelectItem value="COMMISSION">Commission</SelectItem>
+                    {options.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
             </div>

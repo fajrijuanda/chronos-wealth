@@ -40,9 +40,19 @@ export function getSidebarSections(pendingIncomingCount: number): SidebarSection
       items: [
         { key: "overview", name: "Dashboard", href: "/overview", icon: LayoutDashboard },
         { key: "assets", name: "Assets", href: "/assets", icon: Box },
-        { key: "income", name: "Income", href: "/income", icon: Wallet },
+        {
+          key: "income",
+          name: "Income",
+          href: "/income",
+          icon: Wallet,
+          children: [
+            { name: "All Sources", href: "/income?tab=all" },
+            { name: "Booth", href: "/income?tab=booth" },
+            { name: "Non-Booth", href: "/income?tab=non-booth" },
+          ],
+        },
         { key: "expenses", name: "Expenses", href: "/expenses", icon: TrendingDown },
-          { key: "budget", name: "Budget", href: "/budget", icon: PieChart },
+        { key: "budget", name: "Budget", href: "/budget", icon: PieChart },
         { key: "targets", name: "Targets", href: "/targets", icon: Target },
         { key: "simulation", name: "Simulation", href: "/simulation", icon: LineChart },
         {

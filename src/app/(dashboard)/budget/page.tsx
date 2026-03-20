@@ -1,14 +1,21 @@
-import { getCategoryExpenseWarning, getBudgetLimits } from "@/actions/budget";
+import {
+    getBudgetCategorySuggestions,
+    getCategoryExpenseWarning,
+    getBudgetLimits,
+} from "@/actions/budget";
 import { AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatGroupedNumber } from "@/lib/number-format";
-import { BudgetSettingsDialog } from "./BudgetSettingsDialog";
+import { BudgetCrudPanel } from "./BudgetCrudPanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function BudgetPage() {
-    const limits = await getBudgetLimits();
+    const [limits, categorySuggestions] = await Promise.all([
+        getBudgetLimits(),
+        getBudgetCategorySuggestions(),
+    ]);
 
     // Map each budget limit to include current month warning
     const categoriesWithWarning = await Promise.all(
@@ -29,8 +36,17 @@ export default async function BudgetPage() {
                     <h1 className="text-3xl font-bold tracking-tight mb-2">Budget Management</h1>
                     <p className="text-slate-500 dark:text-slate-400">Set and monitor your monthly spending limits per category.</p>
                 </div>
-                <BudgetSettingsDialog categories={limits} />
             </div>
+
+            <BudgetCrudPanel
+                limits={limits.map((item) => ({
+                    id: item.id,
+                    category: item.category,
+                    maxLimit: item.maxLimit,
+                    warningThreshold: item.warningThreshold,
+                }))}
+                categorySuggestions={categorySuggestions}
+            />
 
             <div className="space-y-4">
                 {categoriesWithWarning.length === 0 && (

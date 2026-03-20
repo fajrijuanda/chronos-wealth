@@ -90,22 +90,22 @@ export default async function ProfilePage({
         </div>
 
         <div className="px-6 pb-6">
-          <div className="relative -mt-12 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center">
               {profile.profileUser.profilePhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.profileUser.profilePhotoUrl}
                   alt={profile.profileUser.displayName}
-                  className="h-24 w-24 rounded-3xl border-4 border-white object-cover shadow-lg dark:border-slate-900"
+                  className="-mt-12 h-24 w-24 rounded-3xl border-4 border-white object-cover shadow-lg dark:border-slate-900"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-linear-to-br from-[#5f86ff] to-[#76ccff] text-3xl font-bold text-white shadow-lg dark:border-slate-900">
+                <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-linear-to-br from-[#5f86ff] to-[#76ccff] text-3xl font-bold text-white shadow-lg dark:border-slate-900">
                   {(profile.profileUser.displayName.trim().charAt(0) || "U").toUpperCase()}
                 </div>
               )}
 
-              <div>
+              <div className="rounded-2xl bg-background/85 px-3 py-2 backdrop-blur-sm sm:px-4">
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{profile.profileUser.displayName}</h1>
                 <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                   <Mail className="h-4 w-4" /> {profile.profileUser.email}
@@ -122,7 +122,7 @@ export default async function ProfilePage({
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 xl:pt-1 xl:justify-end">
               <Link href="/profile/edit" className="go-chip">Edit Profile</Link>
               <Link href="/settings" className="go-chip">Account Settings</Link>
               <Link href="/targets" className="go-chip">Open Targets</Link>

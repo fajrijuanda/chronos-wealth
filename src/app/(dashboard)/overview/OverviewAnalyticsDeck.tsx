@@ -180,9 +180,9 @@ export function OverviewAnalyticsDeck(props: OverviewAnalyticsDeckProps) {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-12">
-        <article className="relative overflow-hidden rounded-3xl border border-slate-300/30 bg-linear-to-br from-violet-500 via-indigo-500 to-fuchsia-500 p-6 text-white shadow-[0_28px_50px_-35px_rgba(109,40,217,0.8)] lg:col-span-6">
+        <article className="relative overflow-hidden rounded-3xl border border-slate-300/30 bg-linear-to-br from-[#a99cf2] via-[#9f95ef] to-[#bea8ef] p-6 text-white shadow-[0_24px_42px_-34px_rgba(124,100,214,0.62)] lg:col-span-6">
           <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/25 blur-3xl" />
-          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-violet-200/35 blur-3xl" />
+          <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-violet-100/45 blur-3xl" />
 
           <div className="relative flex items-start justify-between gap-3">
             <div>

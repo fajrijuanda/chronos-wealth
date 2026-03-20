@@ -112,24 +112,24 @@ export default async function PublicProfilePage({
           <div className="absolute left-[34%] top-10 h-16 w-16 rounded-2xl bg-white/20 blur-lg" />
         </div>
         <div className="px-6 pb-6">
-          <div className="-mt-12 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               {profile.profileUser.profilePhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.profileUser.profilePhotoUrl}
                   alt={profile.profileUser.displayName}
-                  className="h-24 w-24 rounded-3xl border-4 border-white object-cover shadow-lg dark:border-slate-900"
+                  className="-mt-12 h-24 w-24 rounded-3xl border-4 border-white object-cover shadow-lg dark:border-slate-900"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-linear-to-br from-[#5f86ff] to-[#76ccff] text-3xl font-bold text-white shadow-lg dark:border-slate-900">
+                <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-linear-to-br from-[#5f86ff] to-[#76ccff] text-3xl font-bold text-white shadow-lg dark:border-slate-900">
                   {(profile.profileUser.displayName.trim().charAt(0) || "U").toUpperCase()}
                 </div>
               )}
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">{profile.profileUser.displayName}</h1>
-                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4" /> {profile.profileUser.email}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Joined: {formatJakartaDateTime(profile.profileUser.createdAt)}</p>
+              <div className="rounded-2xl bg-background/85 px-3 py-2 backdrop-blur-sm sm:px-4">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{profile.profileUser.displayName}</h1>
+                <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200"><Mail className="h-4 w-4" /> {profile.profileUser.email}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Joined: {formatJakartaDateTime(profile.profileUser.createdAt)}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/35 dark:text-indigo-300"><BriefcaseBusiness className="h-3 w-3" /> Financial Strategist</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300"><ShieldCheck className="h-3 w-3" /> Active</span>
@@ -137,7 +137,7 @@ export default async function PublicProfilePage({
               </div>
             </div>
 
-            <div>
+            <div className="flex flex-wrap gap-2 xl:pt-1 xl:justify-end">
               {profile.relationship === "NONE" ? (
                 <Link href="/profile?tab=connections" className="go-chip">Connect from Profile</Link>
               ) : null}

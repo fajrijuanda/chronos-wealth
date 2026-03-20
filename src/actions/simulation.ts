@@ -210,13 +210,26 @@ async function simulateUserBoothPlan(input: {
     boothBasePrice: input.simUser.fallbackBoothPrice,
   });
 
-  const [financeProfile, incomeSources, target, ownerships] = await Promise.all([
+  const [financeProfile, incomeSources, target, ownerships, expenseTransactions] = await Promise.all([
     prisma.userFinanceProfile.findUnique({ where: { userId: user.id } }),
     getIncomeSourcesByUserId(user.id),
     prisma.userBoothTarget.findUnique({ where: { userId: user.id } }),
     prisma.boothOwnership.findMany({
       where: { userId: user.id },
       include: { booth: true },
+    }),
+    prisma.transaction.findMany({
+      where: {
+        type: "EXPENSE",
+        date: {
+          gte: startOfMonth(new Date()),
+          lte: lastDayOfMonth(input.targetDate),
+        },
+      },
+      select: {
+        date: true,
+        amount: true,
+      },
     }),
   ]);
 
@@ -233,10 +246,26 @@ async function simulateUserBoothPlan(input: {
   );
 
   let cash = financeProfile?.openingBalance ?? input.simUser.fallbackOpeningBalance;
-  const monthlyExpense =
-    ((financeProfile?.monthlyExpenseMin ?? input.simUser.fallbackExpenseMin) +
-      (financeProfile?.monthlyExpenseMax ?? input.simUser.fallbackExpenseMax)) /
-    2;
+
+  const profileMin = financeProfile?.monthlyExpenseMin;
+  const profileMax = financeProfile?.monthlyExpenseMax;
+  const isDefaultProfileExpense =
+    profileMin === input.simUser.fallbackExpenseMin &&
+    profileMax === input.simUser.fallbackExpenseMax;
+  const hasExplicitProfileExpense =
+    financeProfile &&
+    profileMin !== undefined &&
+    profileMax !== undefined &&
+    !isDefaultProfileExpense;
+  const profileMonthlyExpenseBase = hasExplicitProfileExpense
+    ? ((profileMin ?? 0) + (profileMax ?? 0)) / 2
+    : 0;
+
+  const expenseByMonth = expenseTransactions.reduce<Record<string, number>>((acc, tx) => {
+    const key = monthKey(tx.date);
+    acc[key] = (acc[key] ?? 0) + tx.amount;
+    return acc;
+  }, {});
 
   const purchaseTiming =
     financeProfile?.purchaseTiming ?? input.simUser.fallbackPurchaseTiming;
@@ -295,6 +324,9 @@ async function simulateUserBoothPlan(input: {
     const monthDate = addMonths(start, i);
     const monthEndDate = lastDayOfMonth(monthDate);
     const daysInMonth = getDate(monthEndDate);
+
+    const transactionExpense = expenseByMonth[monthKey(monthDate)] ?? 0;
+    const monthlyExpense = profileMonthlyExpenseBase + transactionExpense;
 
     const profileDay = financeProfile?.purchaseDayOverride;
     const defaultPurchaseDay =
@@ -545,7 +577,7 @@ async function simulateUserBoothPlan(input: {
     purchaseTiming,
     includeHoldingPlan,
     includePt2Plan,
-    monthlyExpense,
+    monthlyExpense: profileMonthlyExpenseBase,
     idleCashTarget,
     holdingFundAccumulated,
     personalHoldingTarget,

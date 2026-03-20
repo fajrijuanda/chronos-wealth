@@ -1,4 +1,4 @@
-import { getIncomeSources } from "@/actions/income";
+import { getIncomeSourcesByEmail } from "@/actions/income";
 import {
     getBoothSalesHistoryByEmail,
     importMonthlyBoothSalesByEmail,
@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AddIncomeDialog } from "./AddIncomeDialog";
 import { IncomeDataTables } from "./IncomeDataTables";
+import { CategoryType } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +23,33 @@ export default async function IncomePage({
     const activeEmail = await getActiveUserEmail(
         typeof sp.user === "string" ? sp.user : undefined,
     );
+    const tabRaw = typeof sp.tab === "string" ? sp.tab : "all";
+    const tab = tabRaw === "booth" || tabRaw === "non-booth" ? tabRaw : "all";
 
-    const incomes = await getIncomeSources();
+    const incomes = await getIncomeSourcesByEmail(activeEmail);
     const [workspace, salesHistory] = await Promise.all([
         getCollaborationWorkspace(activeEmail),
         getBoothSalesHistoryByEmail({ email: activeEmail, limit: 24 }),
     ]);
 
-    const userQuery = `user=${encodeURIComponent(activeEmail)}`;
+    const userQuery = `user=${encodeURIComponent(activeEmail)}&tab=${encodeURIComponent(tab)}`;
+    const filteredIncomes = incomes.filter((inc) => {
+        if (tab === "booth") return inc.category === "BOOTH";
+        if (tab === "non-booth") return inc.category !== "BOOTH";
+        return true;
+    });
+
+    const tabStats = {
+        all: incomes.length,
+        booth: incomes.filter((inc) => inc.category === "BOOTH").length,
+        nonBooth: incomes.filter((inc) => inc.category !== "BOOTH").length,
+    };
+    const dialogCategories: CategoryType[] =
+        tab === "booth"
+            ? ["BOOTH"]
+            : tab === "non-booth"
+              ? ["SALARY", "PROJECT", "COMMISSION", "STOCK", "SAAS"]
+              : ["SALARY", "PROJECT", "COMMISSION", "STOCK", "SAAS", "BOOTH"];
 
     async function handleSalesUpload(formData: FormData) {
         "use server";
@@ -70,13 +90,37 @@ export default async function IncomePage({
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight mb-2">Income Sources</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Manage your recurring incomes and one-time projects.</p>
+                    <p className="text-slate-500 dark:text-slate-400">Manage income by type. Booth income is separated for clearer tracking.</p>
                 </div>
-                <AddIncomeDialog email={activeEmail} />
+                <AddIncomeDialog email={activeEmail} categoryOptions={dialogCategories} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Link
+                    href={`/income?tab=all&${userQuery}`}
+                    className={`rounded-2xl border p-4 transition ${tab === "all" ? "border-indigo-300 bg-indigo-50/70 dark:border-indigo-700 dark:bg-indigo-900/20" : "border-border/70 bg-card/70"}`}
+                >
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">All Income</p>
+                    <p className="mt-1 text-2xl font-semibold">{tabStats.all}</p>
+                </Link>
+                <Link
+                    href={`/income?tab=booth&${userQuery}`}
+                    className={`rounded-2xl border p-4 transition ${tab === "booth" ? "border-indigo-300 bg-indigo-50/70 dark:border-indigo-700 dark:bg-indigo-900/20" : "border-border/70 bg-card/70"}`}
+                >
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Booth Income</p>
+                    <p className="mt-1 text-2xl font-semibold">{tabStats.booth}</p>
+                </Link>
+                <Link
+                    href={`/income?tab=non-booth&${userQuery}`}
+                    className={`rounded-2xl border p-4 transition ${tab === "non-booth" ? "border-indigo-300 bg-indigo-50/70 dark:border-indigo-700 dark:bg-indigo-900/20" : "border-border/70 bg-card/70"}`}
+                >
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Non-Booth Income</p>
+                    <p className="mt-1 text-2xl font-semibold">{tabStats.nonBooth}</p>
+                </Link>
             </div>
 
             <IncomeDataTables
-                incomes={incomes.map((inc) => ({
+                incomes={filteredIncomes.map((inc) => ({
                     id: inc.id,
                     name: inc.name,
                     category: inc.category,
@@ -96,8 +140,10 @@ export default async function IncomePage({
                     uploadedBy: item.uploadedBy.displayName,
                     uploadedAt: item.uploadedAt,
                 }))}
+                showSalesHistory={tab !== "non-booth"}
             />
 
+            {tab !== "non-booth" ? (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div className="rounded-2xl backdrop-blur-md bg-white/60 dark:bg-slate-900/60 border border-white/20 shadow-sm p-6">
                     <h2 className="text-xl font-semibold mb-2">Upload Monthly Booth Sales (Excel)</h2>
@@ -174,6 +220,7 @@ export default async function IncomePage({
                     </div>
                 </div>
             </div>
+            ) : null}
 
             
         </div>

@@ -25,9 +25,9 @@ function useIsHrefActive() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
 
-  return (href: string) => {
+  return (href: string, exact = false) => {
     const [base] = href.split("?");
-    const isPathMatch = pathname === base || pathname.startsWith(`${base}/`);
+    const isPathMatch = pathname === base || (!exact && pathname.startsWith(`${base}/`));
     if (!isPathMatch) return false;
 
     const tab = hrefToTab(href);
@@ -36,12 +36,13 @@ function useIsHrefActive() {
   };
 }
 
-function hasActiveChild(item: SidebarGroupItem, isActive: (href: string) => boolean) {
-  return Boolean(item.children?.some((child) => isActive(child.href)));
+function hasActiveChild(item: SidebarGroupItem, isActive: (href: string, exact?: boolean) => boolean) {
+  return Boolean(item.children?.some((child) => isActive(child.href, true)));
 }
 
-function isParentActive(item: SidebarGroupItem, isActive: (href: string) => boolean) {
-  return (item.href ? isActive(item.href) : false) || hasActiveChild(item, isActive);
+function isParentActive(item: SidebarGroupItem, isActive: (href: string, exact?: boolean) => boolean) {
+  const ownActive = item.href ? isActive(item.href, Boolean(item.children?.length)) : false;
+  return ownActive || hasActiveChild(item, isActive);
 }
 
 function CollapsedTooltip({ label }: { label: string }) {
@@ -124,7 +125,7 @@ export function Sidebar({
   };
 
   const renderLeafItem = (child: SidebarLeaf, index?: number) => {
-    const childActive = isHrefActive(child.href);
+    const childActive = isHrefActive(child.href, true);
     const staggerDelay = index !== undefined ? `${index * 50}ms` : undefined;
     return (
       <Link
