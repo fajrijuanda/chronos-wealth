@@ -735,7 +735,8 @@ async function simulateUserBoothPlan(input: {
     const incomeAfterPurchase = totalMonthEventsIncome - incomeBeforePurchase;
 
     const patunganTopUpApplied = pendingPatunganTopUp;
-    const openingBalanceForMonth = previousMonthEndCash + patunganTopUpApplied;
+    const ownCashAtMonthStart = previousMonthEndCash;
+    const openingBalanceForMonth = ownCashAtMonthStart + patunganTopUpApplied;
     pendingPatunganTopUp = 0;
     cash = openingBalanceForMonth + incomeBeforePurchase;
     const cashBeforePurchase = openingBalanceForMonth;
@@ -791,7 +792,7 @@ async function simulateUserBoothPlan(input: {
       // Allocate capital sources sequentially:
       // - First booth(s) from own cash
       // - Remaining booth(s) from patungan top-up
-      const availableOwn = Math.max(0, previousMonthEndCash - cumulativeOwnUsed);
+      const availableOwn = Math.max(0, ownCashAtMonthStart - cumulativeOwnUsed);
       const ownForThisBooth = Math.min(boothPrice, availableOwn);
       const patunganForThisBooth = boothPrice - ownForThisBooth;
       
