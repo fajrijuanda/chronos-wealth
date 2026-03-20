@@ -77,11 +77,15 @@ export function IncomeDataTables({
       label: "Schedule",
       render: (row) =>
         row.isRecurring
-          ? `Every ${row.payoutDate ?? "-"}th`
+          ? row.expectedDate
+            ? `Every ${row.payoutDate ?? "-"}th (from ${formatJakartaDate(row.expectedDate)})`
+            : `Every ${row.payoutDate ?? "-"}th`
           : (row.expectedDate ? formatJakartaDate(row.expectedDate) : "-"),
       exportValue: (row) =>
         row.isRecurring
-          ? `Every ${row.payoutDate ?? "-"}th`
+          ? row.expectedDate
+            ? `Every ${row.payoutDate ?? "-"}th (from ${formatJakartaDate(row.expectedDate)})`
+            : `Every ${row.payoutDate ?? "-"}th`
           : (row.expectedDate ? formatJakartaDate(row.expectedDate) : "-"),
     },
     {

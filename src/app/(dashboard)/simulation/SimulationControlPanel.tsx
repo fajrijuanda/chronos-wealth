@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import DatePickerCalendar from "@/components/ui/DatePickerCalendar";
 import { SimulationSettingsDialog } from "./SimulationSettingsDialog";
 import { ManualPriceForm } from "../assets/ManualPriceForm";
 
@@ -95,12 +96,10 @@ export function SimulationControlPanel(props: {
           <label htmlFor="sim-target-date" className="text-xs font-black uppercase tracking-widest text-slate-400">
             Target Date
           </label>
-          <input
+          <DatePickerCalendar
             id="sim-target-date"
-            type="date"
             value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-11 w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-black/20 px-4"
+            onChange={setDate}
           />
         </div>
 

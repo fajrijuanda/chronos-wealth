@@ -89,35 +89,6 @@ function getContractEventType(label: string): ContractEventType | null {
   return null;
 }
 
-function getActiveSharePct(
-  booth: {
-    packageType: BoothPackageType;
-    mouSignedAt: Date;
-    economyProfitSharePct: number;
-    exclusivePhase2StartsAfterMonths: number;
-    exclusiveSharePhase1Pct: number;
-    exclusiveSharePhase2Pct: number;
-  },
-  monthDate: Date,
-) {
-  const monthsSinceMou = differenceInMonths(
-    startOfMonth(monthDate),
-    startOfMonth(booth.mouSignedAt),
-  );
-
-  if (monthsSinceMou < 0) {
-    return 0;
-  }
-
-  if (booth.packageType === BoothPackageType.ECONOMY) {
-    return booth.economyProfitSharePct;
-  }
-
-  return monthsSinceMou >= booth.exclusivePhase2StartsAfterMonths
-    ? booth.exclusiveSharePhase2Pct
-    : booth.exclusiveSharePhase1Pct;
-}
-
 export async function calculateSimulation(
   targetDate: Date,
   monthlyExpenseBase: number,
@@ -278,11 +249,9 @@ async function simulateUserBoothPlan(input: {
     financeProfile?.purchaseTiming ?? input.simUser.fallbackPurchaseTiming;
 
   const existingEquivalent = ownerships.reduce((acc, ownership) => {
-    const sharePct = getActiveSharePct(ownership.booth, new Date());
     const monthlyShare =
       ownership.booth.expectedMonthlyIncome *
       ownership.booth.boothUnitCount *
-      (sharePct / 100) *
       (ownership.revenueSharePct / 100);
     return acc + monthlyShare / revenuePerBooth;
   }, 0);
@@ -319,6 +288,7 @@ async function simulateUserBoothPlan(input: {
     reserveGuard: number;
     monthlyBoothIncome: number;
     monthlyCommissionIncome: number;
+    monthlyNonBoothIncome: number;
     boothsAdded: number;
     totalBoothsEquivalent: number;
     monthEndCash: number;
@@ -346,8 +316,14 @@ async function simulateUserBoothPlan(input: {
       : defaultPurchaseDay;
 
     const events: DatedEvent[] = [];
+    let monthlyNonBoothIncome = 0;
 
     for (const income of incomeSources) {
+      if (income.category === CategoryType.BOOTH) {
+        // Booth payout is already computed from ownership records below.
+        continue;
+      }
+
       if (
         includeHoldingPlan &&
         income.category === CategoryType.STOCK &&
@@ -357,11 +333,25 @@ async function simulateUserBoothPlan(input: {
       }
 
       if (income.isRecurring) {
+        if (income.expectedDate && startOfMonth(monthDate) < startOfMonth(income.expectedDate)) {
+          continue;
+        }
+
+        const recurringDay = clampDay(income.payoutDate ?? 1, 1, daysInMonth);
+        const firstMonthStartDay = income.expectedDate
+          ? clampDay(getDate(income.expectedDate), 1, daysInMonth)
+          : recurringDay;
+        const eventDay =
+          income.expectedDate && monthKey(income.expectedDate) === monthKey(monthDate)
+            ? Math.max(recurringDay, firstMonthStartDay)
+            : recurringDay;
+
         events.push({
-          day: clampDay(income.payoutDate ?? 1, 1, daysInMonth),
+          day: eventDay,
           amount: income.amount,
           label: income.name,
         });
+        monthlyNonBoothIncome += income.amount;
         continue;
       }
 
@@ -371,6 +361,7 @@ async function simulateUserBoothPlan(input: {
           amount: income.amount,
           label: income.name,
         });
+        monthlyNonBoothIncome += income.amount;
       }
     }
 
@@ -462,13 +453,11 @@ async function simulateUserBoothPlan(input: {
       }
 
       if (boothActiveInMonth) {
-        const activeSharePct = getActiveSharePct(booth, monthDate);
         const extraUnits = exclusiveExtraUnitsByOwnershipId.get(ownership.id) ?? 0;
         const effectiveUnits = booth.boothUnitCount + extraUnits;
         const incomeAmount =
           booth.expectedMonthlyIncome *
           effectiveUnits *
-          (activeSharePct / 100) *
           (ownership.revenueSharePct / 100);
 
         events.push({
@@ -556,26 +545,33 @@ async function simulateUserBoothPlan(input: {
     simulatedEquivalentAdded += boothsAdded;
     boothEquivalentOwned = activeEquivalentFromOwned + simulatedEquivalentAdded;
 
+    const totalPureIncome =
+      monthlyBoothIncome + monthlyCommissionIncome + monthlyNonBoothIncome;
+    const incomeEquivalent = revenuePerBooth > 0 ? totalPureIncome / revenuePerBooth : 0;
+
     plans.push({
       monthKey: format(monthDate, "yyyy-MM"),
       month: format(monthDate, "MMM yyyy"),
       purchaseDay,
       cashBeforePurchase,
-      monthlyIncome: totalMonthEventsIncome,
+      monthlyIncome: totalPureIncome,
       monthlyExpense,
       monthlyHoldingSaved: actualHoldingSaved,
       monthlyPt2Saved: actualPt2Saved,
       reserveGuard,
       monthlyBoothIncome,
       monthlyCommissionIncome,
+      monthlyNonBoothIncome,
       boothsAdded,
-      totalBoothsEquivalent: boothEquivalentOwned,
+      totalBoothsEquivalent: incomeEquivalent,
       monthEndCash: cash,
       contractEvents,
     });
   }
 
-  const projectedMonthlyIncome = boothEquivalentOwned * revenuePerBooth;
+  const latestPlan = plans[plans.length - 1];
+  const projectedMonthlyIncome = latestPlan?.monthlyIncome ?? 0;
+  const displayedEquivalent = latestPlan?.totalBoothsEquivalent ?? boothEquivalentOwned;
 
   return {
     userId: user.id,
@@ -596,7 +592,7 @@ async function simulateUserBoothPlan(input: {
     personalPt2Target,
     pt2LaunchDate,
     projectedMonthlyIncome,
-    boothEquivalentOwned,
+    boothEquivalentOwned: displayedEquivalent,
     plans,
   };
 }

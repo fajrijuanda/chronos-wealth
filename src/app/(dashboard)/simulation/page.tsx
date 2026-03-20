@@ -27,8 +27,11 @@ type SimulationParticipant = {
     month: string;
     purchaseDay: number;
     boothsAdded: number;
+    monthlyIncome: number;
+    monthlyExpense: number;
     monthlyBoothIncome: number;
     monthlyCommissionIncome: number;
+    monthlyNonBoothIncome: number;
     totalBoothsEquivalent: number;
     monthEndCash: number;
     contractEvents: Array<{
@@ -272,7 +275,7 @@ export default async function SimulationPage({
             </p>
             <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="surface-card-soft px-4 py-3">
-                <p className="text-[11px] uppercase tracking-wider text-body-muted">Total Booth Equivalent</p>
+                <p className="text-[11px] uppercase tracking-wider text-body-muted">Total Income Eq.</p>
                 <p className="text-projection text-lg font-bold">{simulation.combined.totalBoothEquivalent.toFixed(2)} Eq.</p>
               </div>
               <div className="surface-card-soft px-4 py-3">
@@ -314,7 +317,7 @@ export default async function SimulationPage({
                     <p className="text-income font-bold">Rp {formatGroupedNumber(user.projectedMonthlyIncome)}</p>
                   </div>
                   <div className="surface-card-soft px-3 py-2 sm:col-span-2">
-                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Target Booth Equivalent</p>
+                    <p className="text-[11px] uppercase tracking-wider text-body-muted">Target Income Eq.</p>
                     <p className="font-bold">{user.targetBoothEquivalent}</p>
                   </div>
                 </div>
@@ -387,9 +390,12 @@ export default async function SimulationPage({
                         <th className="px-3 py-2">Buy Day</th>
                         <th className="px-3 py-2">Add Booth</th>
                         <th className="px-3 py-2">Booth Income</th>
-                        <th className="px-3 py-2">Commission</th>
+                        <th className="px-3 py-2">Booth Commission</th>
+                        <th className="px-3 py-2">Non-Booth Income</th>
+                        <th className="px-3 py-2">Total Income</th>
+                        <th className="px-3 py-2">Expense (Budget)</th>
                         <th className="px-3 py-2">Contract Events</th>
-                        <th className="px-3 py-2">Total Eq.</th>
+                        <th className="px-3 py-2">Income Eq.</th>
                         <th className="px-3 py-2">End Cash</th>
                       </tr>
                     </thead>
@@ -407,6 +413,9 @@ export default async function SimulationPage({
                             <td className="px-3 py-2 font-semibold text-blue-600">{plan.boothsAdded}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyBoothIncome)}</td>
                             <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyCommissionIncome)}</td>
+                            <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyNonBoothIncome)}</td>
+                            <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyIncome)}</td>
+                            <td className="px-3 py-2">Rp {formatGroupedNumber(plan.monthlyExpense)}</td>
                             <td className="px-3 py-2 text-xs">
                               {filteredEvents.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">

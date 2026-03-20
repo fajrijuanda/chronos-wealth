@@ -80,7 +80,7 @@ export default function DatePickerCalendar({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-indigo-50/95 dark:from-violet-950/70 dark:via-purple-950/60 dark:to-indigo-950/70 border border-violet-200/80 dark:border-violet-400/30 rounded-2xl shadow-[0_24px_40px_-28px_rgba(115,102,224,0.8)] z-50 p-4 min-w-80 backdrop-blur-sm">
+        <div className="absolute top-full mt-2 left-0 bg-violet-50/95 dark:bg-violet-950/65 border border-violet-200/80 dark:border-violet-400/30 rounded-2xl shadow-[0_24px_40px_-28px_rgba(115,102,224,0.8)] z-50 p-4 min-w-80 backdrop-blur-sm">
           {/* Header with month/year and navigation */}
           <div className="flex items-center justify-between mb-4">
             <button
@@ -135,7 +135,7 @@ export default function DatePickerCalendar({
                   }
                   ${
                     selectedDate && day && isSameDay(selectedDate, day)
-                      ? "bg-gradient-to-br from-violet-400 via-purple-400 to-indigo-400 text-white font-bold shadow-[0_10px_20px_-14px_rgba(111,92,219,0.95)]"
+                      ? "bg-violet-400 text-white font-bold shadow-[0_10px_20px_-14px_rgba(111,92,219,0.95)]"
                       : ""
                   }
                   ${
@@ -158,7 +158,7 @@ export default function DatePickerCalendar({
                 const today = new Date();
                 handleDateSelect(today);
               }}
-              className="w-full px-3 py-2 bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400 hover:from-violet-500 hover:via-purple-500 hover:to-indigo-500 text-white rounded-xl font-semibold transition-all"
+              className="w-full px-3 py-2 bg-violet-400 hover:bg-violet-500 text-white rounded-xl font-semibold transition-all"
             >
               Today
             </button>
