@@ -4,6 +4,7 @@ import { getSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
 import { LoginSubmitButton } from "./LoginSubmitButton";
 import { LogIn } from "lucide-react";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 export default async function LoginPage({
   searchParams,
@@ -38,6 +39,7 @@ export default async function LoginPage({
     }
 
     await setSessionUserEmail(email);
+    revalidatePath("/(dashboard)");
     redirect("/overview");
   }
 

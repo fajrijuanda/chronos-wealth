@@ -3,6 +3,7 @@ import { SoftDecorShapes } from "@/components/layout/SoftDecorShapes";
 import { getSessionUserEmail, setSessionUserEmail } from "@/lib/auth-session";
 import { UserPlus } from "lucide-react";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 export default async function RegisterPage({
   searchParams,
@@ -45,6 +46,7 @@ export default async function RegisterPage({
         });
 
         await setSessionUserEmail(email);
+        revalidatePath("/(dashboard)");
         redirectTarget = "/overview";
       }
     } catch (e: unknown) {

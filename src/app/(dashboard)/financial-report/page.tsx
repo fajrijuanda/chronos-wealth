@@ -23,6 +23,9 @@ export default async function FinancialReportPage({
   const monthsRaw = typeof sp.months === "string" ? Number(sp.months) : 12;
   const months = Number.isFinite(monthsRaw) ? Math.max(1, Math.min(36, Math.round(monthsRaw))) : 12;
 
+  const simulationStartDate = new Date();
+  simulationStartDate.setDate(1);
+
   const simulationTargetDate = new Date();
   simulationTargetDate.setMonth(simulationTargetDate.getMonth() + (months - 1));
   simulationTargetDate.setDate(1);
@@ -31,6 +34,7 @@ export default async function FinancialReportPage({
     getMonthlyFinancialReport({ months }),
     simulateSingleUserGrowth({
       email: activeEmail,
+      startDate: simulationStartDate,
       targetDate: simulationTargetDate,
     }),
   ]);

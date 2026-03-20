@@ -1,7 +1,7 @@
 "use client";
 
 import { BoothPackageType } from "@prisma/client";
-import { Gem, House, Layers } from "lucide-react";
+import { Gem, House, Layers, Crown, ShoppingCart, Star } from "lucide-react";
 import { formatGroupedNumber } from "@/lib/number-format";
 import { formatJakartaDate } from "@/lib/date-format";
 import { ManagementTable, type TableColumn, type TableFilter } from "@/components/ui/management-table";
@@ -53,6 +53,28 @@ function getTypeMeta(type: AssetRow["assetType"]) {
     label: "Booth",
     className: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/35 dark:text-indigo-300",
     Icon: Layers,
+  };
+}
+
+function getBoothPlanMeta(packageType: string) {
+  if (packageType === "EXCLUSIVE") {
+    return {
+      label: "Exclusive",
+      className: "bg-purple-100 text-purple-700 dark:bg-purple-900/35 dark:text-purple-300",
+      Icon: Crown,
+    };
+  }
+  if (packageType === "ECONOMY") {
+    return {
+      label: "Economy",
+      className: "bg-blue-100 text-blue-700 dark:bg-blue-900/35 dark:text-blue-300",
+      Icon: ShoppingCart,
+    };
+  }
+  return {
+    label: packageType || "Standard",
+    className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    Icon: Star,
   };
 }
 
@@ -115,8 +137,20 @@ export function AssetsPortfolioTable({
     {
       key: "package",
       label: "Plan",
-      render: (row) => row.packageLabel,
-      exportValue: (row) => row.packageLabel,
+      render: (row) => {
+        if (row.assetType !== "BOOTH") {
+          return row.packageLabel;
+        }
+        const meta = getBoothPlanMeta(row.packageLabel);
+        const Icon = meta.Icon;
+        return (
+          <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold ${meta.className}`}>
+            <Icon className="h-3.5 w-3.5" />
+            {meta.label}
+          </span>
+        );
+      },
+      exportValue: (row) => row.assetType === "BOOTH" ? getBoothPlanMeta(row.packageLabel).label : row.packageLabel,
       sortValue: (row) => row.packageLabel,
     },
     {
