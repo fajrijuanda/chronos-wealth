@@ -90,8 +90,8 @@ export default async function ProfilePage({
         </div>
 
         <div className="px-6 pb-6">
-          <div className="-mt-12 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="relative -mt-12 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end">
               {profile.profileUser.profilePhotoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -106,11 +106,11 @@ export default async function ProfilePage({
               )}
 
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">{profile.profileUser.displayName}</h1>
-                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{profile.profileUser.displayName}</h1>
+                <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                   <Mail className="h-4 w-4" /> {profile.profileUser.email}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">Joined: {formatJakartaDateTime(profile.profileUser.createdAt)}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Joined: {formatJakartaDateTime(profile.profileUser.createdAt)}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/35 dark:text-indigo-300">
                     <BriefcaseBusiness className="h-3 w-3" /> Financial Strategist

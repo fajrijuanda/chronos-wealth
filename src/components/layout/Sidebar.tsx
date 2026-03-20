@@ -313,9 +313,6 @@ export function Sidebar({
       </div>
 
       <div className={cn("border-t border-sidebar-border/70", collapsed ? "p-2" : "p-3")}>
-        {!collapsed ? (
-          <p className="mb-2 truncate px-1 text-[11px] text-slate-500 dark:text-slate-400">{summary.email}</p>
-        ) : null}
         <SidebarLogoutButton
           action={logoutAction}
           compact={collapsed}

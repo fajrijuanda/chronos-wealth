@@ -10,17 +10,17 @@ export function LoginSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="relative w-full overflow-hidden rounded-2xl px-4 py-2.5 font-medium text-white transition-all disabled:cursor-not-allowed disabled:opacity-80 bg-linear-to-r from-primary via-[#9399f0] to-primary hover:brightness-105 shadow-[0_14px_30px_-18px_rgba(125,132,226,0.9)]"
+      className="relative w-full overflow-hidden rounded-2xl px-4 py-3 font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-80 bg-linear-to-r from-[#7e86e8] via-[#9198ef] to-[#7e86e8] hover:brightness-105 shadow-[0_14px_30px_-18px_rgba(125,132,226,0.9)] focus:outline-none focus:ring-2 focus:ring-[#7e86e8]/50 focus:ring-offset-2 dark:focus:ring-offset-slate-900 group"
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/30 to-transparent animate-shimmer-x"
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-500"
       />
       <span className="relative flex items-center justify-center gap-2">
         {pending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Memverifikasi akun...
+            Sedang memverifikasi...
           </>
         ) : (
           "Masuk ke Dashboard"

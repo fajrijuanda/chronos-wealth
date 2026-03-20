@@ -4,6 +4,7 @@ import {
   Handshake,
   LayoutDashboard,
   LineChart,
+  PieChart,
   Settings,
   Target,
   TrendingDown,
@@ -41,6 +42,7 @@ export function getSidebarSections(pendingIncomingCount: number): SidebarSection
         { key: "assets", name: "Assets", href: "/assets", icon: Box },
         { key: "income", name: "Income", href: "/income", icon: Wallet },
         { key: "expenses", name: "Expenses", href: "/expenses", icon: TrendingDown },
+          { key: "budget", name: "Budget", href: "/budget", icon: PieChart },
         { key: "targets", name: "Targets", href: "/targets", icon: Target },
         { key: "simulation", name: "Simulation", href: "/simulation", icon: LineChart },
         {
